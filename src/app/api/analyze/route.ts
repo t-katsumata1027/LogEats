@@ -203,7 +203,24 @@ function buildSummary(foods: AnalyzedFood[]): NutritionSummary {
   );
 }
 
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 export async function POST(request: NextRequest) {
+  // Cloudflare Edge Runtime の制限（Illegal Invocationエラー）を回避するパッチ:
+  // AI系SDK内部で fetch が直接関数として呼ばれてしまうことによるエラーを防ぐため
+  const originalFetch = globalThis.fetch;
+  if (originalFetch && !originalFetch.name?.includes("bound")) {
+    globalThis.fetch = originalFetch.bind(globalThis);
+  }
+
   const useGemini = !!process.env.GEMINI_API_KEY;
   const useOpenAI = !!process.env.OPENAI_API_KEY;
 
@@ -224,8 +241,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "画像ファイルを送信してください。" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await image.arrayBuffer());
-    const base64 = buffer.toString("base64");
+    // Node.js の Buffer ではなく、Edge 環境で確実に安全な Base64 変換を利用する
+    const arrayBuffer = await image.arrayBuffer();
+    const base64 = arrayBufferToBase64(arrayBuffer);
 
     const recognized = useGemini
       ? await recognizeWithGemini(base64)
