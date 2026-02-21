@@ -256,21 +256,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cloudflare Edge Runtime における NextRequest.formData() の Illegal Invocation を避ける安全な解析
-    let formData: FormData;
-    try {
-      formData = await request.formData();
-    } catch (err: any) {
-      const nativeReq = new Request(request.url, {
-        method: request.method,
-        headers: request.headers,
-        body: request.body,
-        duplex: 'half'
-      } as any);
-      formData = await nativeReq.formData();
-    }
-
+    const formData = await request.formData();
     const image = formData.get("image");
+
     if (!image || !(image instanceof Blob)) {
       return NextResponse.json({ error: "画像ファイルを送信してください。" }, { status: 400 });
     }
