@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = 'edge';
 
 import OpenAI from "openai";
-import { GoogleGenAI, Type } from "@google/genai";
 import {
   lookupFoodMasterWithLearned,
   loadLearnedFoods,
@@ -55,61 +54,6 @@ function parseFoodListJson(content: string): { name: string; amount?: string }[]
   }
 }
 
-/** OpenAI Vision で写っている料理・食品リストを取得 */
-async function recognizeWithOpenAI(base64Image: string): Promise<{ name: string; amount?: string }[]> {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "" });
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    max_tokens: 800,
-    response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: PROMPT },
-          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
-        ],
-      },
-    ],
-  });
-  const content = response.choices[0]?.message?.content?.trim() ?? '{"foods":[]}';
-  return parseFoodListJson(content);
-}
-
-/** Google Gemini で写っている料理・食品リストを取得（無料枠あり） */
-async function recognizeWithGemini(base64Image: string): Promise<{ name: string; amount?: string }[]> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? "" });
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          foods: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                amount: { type: Type.STRING }
-              },
-              required: ["name"]
-            }
-          }
-        },
-        required: ["foods"]
-      }
-    },
-    contents: [
-      { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-      { text: PROMPT },
-    ],
-  });
-  const content = (response.text ?? "").trim() || '{"foods":[]}';
-  return parseFoodListJson(content);
-}
-
 function parseNutritionJson(content: string): FoodMasterRecord | null {
   const jsonStr = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   try {
@@ -139,40 +83,124 @@ function parseNutritionJson(content: string): FoodMasterRecord | null {
   }
 }
 
+/** OpenAI Vision で写っている料理・食品リストを取得 */
+async function recognizeWithOpenAI(base64Image: string): Promise<{ name: string; amount?: string }[]> {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY ?? "",
+    fetch: globalThis.fetch.bind(globalThis) // Edge Runtime の Illegal Invocation 対策
+  });
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    max_tokens: 800,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: PROMPT },
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+        ],
+      },
+    ],
+  });
+  const content = response.choices[0]?.message?.content?.trim() ?? '{"foods":[]}';
+  return parseFoodListJson(content);
+}
+
+/** Google Gemini で写っている料理・食品リストを取得（無料枠あり / Node.js非依存のためREST APIを使用） */
+async function recognizeWithGemini(base64Image: string): Promise<{ name: string; amount?: string }[]> {
+  const apiKey = process.env.GEMINI_API_KEY ?? "";
+  const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { inlineData: { mimeType: "image/jpeg", data: base64Image } },
+            { text: PROMPT }
+          ]
+        }
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            foods: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  name: { type: "STRING" },
+                  amount: { type: "STRING" }
+                },
+                required: ["name"]
+              }
+            }
+          },
+          required: ["foods"]
+        }
+      }
+    })
+  });
+  if (!res.ok) {
+    throw new Error(`Gemini API Error: ${res.status} ${await res.text()}`);
+  }
+  const data = await res.json();
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{"foods":[]}';
+  return parseFoodListJson(content);
+}
+
 /** 食品名と目安量からAIで栄養素（100gあたり）と重量を推定 */
 async function estimateNutritionWithAI(foodName: string, amountStr?: string): Promise<FoodMasterRecord> {
   const useGemini = !!process.env.GEMINI_API_KEY;
   if (useGemini) {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? "" });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            estimated_weight_g: { type: Type.NUMBER },
-            per_100g: {
-              type: Type.OBJECT,
-              properties: {
-                calories: { type: Type.NUMBER },
-                protein: { type: Type.NUMBER },
-                fat: { type: Type.NUMBER },
-                carbs: { type: Type.NUMBER },
-              },
-              required: ["calories", "protein", "fat", "carbs"]
-            }
-          },
-          required: ["estimated_weight_g", "per_100g"]
+    const apiKey = process.env.GEMINI_API_KEY ?? "";
+    const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          { parts: [{ text: NUTRITION_PROMPT(foodName, amountStr) }] }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              estimated_weight_g: { type: "NUMBER" },
+              per_100g: {
+                type: "OBJECT",
+                properties: {
+                  calories: { type: "NUMBER" },
+                  protein: { type: "NUMBER" },
+                  fat: { type: "NUMBER" },
+                  carbs: { type: "NUMBER" }
+                },
+                required: ["calories", "protein", "fat", "carbs"]
+              }
+            },
+            required: ["estimated_weight_g", "per_100g"]
+          }
         }
-      },
-      contents: NUTRITION_PROMPT(foodName, amountStr),
+      })
     });
-    const text = (response.text ?? "").trim();
+    if (!res.ok) {
+      throw new Error(`Gemini API Error: ${res.status} ${await res.text()}`);
+    }
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
     const parsed = parseNutritionJson(text);
     if (parsed) return parsed;
   } else {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "" });
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY ?? "",
+      fetch: globalThis.fetch.bind(globalThis) // Edge Runtime の Illegal Invocation 対策
+    });
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       max_tokens: 250,
@@ -214,13 +242,6 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 }
 
 export async function POST(request: NextRequest) {
-  // Cloudflare Edge Runtime の制限（Illegal Invocationエラー）を回避するパッチ:
-  // AI系SDK内部で fetch が直接関数として呼ばれてしまうことによるエラーを防ぐため
-  const originalFetch = globalThis.fetch;
-  if (originalFetch && !originalFetch.name?.includes("bound")) {
-    globalThis.fetch = originalFetch.bind(globalThis);
-  }
-
   const useGemini = !!process.env.GEMINI_API_KEY;
   const useOpenAI = !!process.env.OPENAI_API_KEY;
 
@@ -235,13 +256,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formData = await request.formData();
+    // Cloudflare Edge Runtime における NextRequest.formData() の Illegal Invocation を避ける安全な解析
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (err: any) {
+      const nativeReq = new Request(request.url, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+        duplex: 'half'
+      } as any);
+      formData = await nativeReq.formData();
+    }
+
     const image = formData.get("image");
     if (!image || !(image instanceof Blob)) {
       return NextResponse.json({ error: "画像ファイルを送信してください。" }, { status: 400 });
     }
 
-    // Node.js の Buffer ではなく、Edge 環境で確実に安全な Base64 変換を利用する
+    // Node.js の Buffer ではなく Edge 環境で確実に安全な Base64 変換を利用する
     const arrayBuffer = await image.arrayBuffer();
     const base64 = arrayBufferToBase64(arrayBuffer);
 
@@ -291,15 +325,8 @@ export async function POST(request: NextRequest) {
     console.error("=== API Analysis Error ===", e);
     const err = e as { status?: number; message?: string; code?: number };
     let message = "画像の解析に失敗しました";
-    if (err.message?.includes("Cannot find module") && useGemini) {
-      message =
-        "Gemini 用のパッケージが入っていません。プロジェクトフォルダで npm install を実行してから再試行してください。";
-    } else if (err.status === 429 || err.code === 429) {
-      message = "API の利用制限に達しました。しばらく待ってから再試行してください。";
-    } else if (err.message?.includes("quota") || err.message?.includes("billing")) {
-      message = "API の利用制限に達しています。";
-    } else if (err.message) {
-      message = err.message;
+    if (err.message) {
+      message += `: ${err.message}`;
     }
     return NextResponse.json({ error: message }, { status: 500 });
   }
