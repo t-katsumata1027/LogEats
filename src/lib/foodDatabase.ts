@@ -1,10 +1,8 @@
 /**
  * 食品名（日本語・英語）から概算栄養を返すデータベース
  * 写真認識で得た食材名にマッチするよう、よくある料理・食材を登録
- * 未登録の食品は学習用ファイル（data/learnedFoods.json）で補完し、API で推定した結果を自動追加できる
+ * 末尾: Edge Runtime対応のためfsのインポートは除外
  */
-import path from "path";
-import fs from "fs/promises";
 
 export interface FoodNutrient {
   calories: number;
@@ -54,37 +52,32 @@ function normalize(s: string): string {
     .replace(/[　\s]/g, "");
 }
 
-/** 学習用JSONのパス（プロジェクトルートの data/learnedFoods.json） */
+// ----------------------------------------------------
+// ※ Cloudflare Pages(Edge Runtime) などサーバーレス環境では
+//    fs（ファイルシステム）を用いたローカルディスクへの保存ができないため、
+//    静的DBのみを正として動作するようにファイルIOを無効化しています。
+// ----------------------------------------------------
+
 export function getLearnedFoodsPath(): string {
-  return path.join(process.cwd(), "data", "learnedFoods.json");
+  // return path.join(process.cwd(), "data", "learnedFoods.json");
+  return "";
 }
 
-/** 学習済み食品（100g基準 + weight_g 単位を持つマスター形式）のロード */
+/** 
+ * 学習済み食品のロード。
+ * Cloudflare Pages デプロイ環境との互換性のため、常に空のオブジェクトを返します。
+ */
 export async function loadLearnedFoods(): Promise<Record<string, FoodMasterRecord>> {
-  const filePath = getLearnedFoodsPath();
-  try {
-    const raw = await fs.readFile(filePath, "utf-8");
-    const parsed = JSON.parse(raw) as Record<string, FoodMasterRecord>;
-    return typeof parsed === "object" && parsed !== null ? parsed : {};
-  } catch {
-    return {};
-  }
+  return {};
 }
 
-/** 学習済みに1件追加（既存の同じキーは上書き） */
+/** 
+ * 学習済みに1件追加する処理。
+ * デプロイ互換性のため何もしない（メモリ上でのみ処理し永続化はしない）状態に変更済みです。
+ */
 export async function addLearnedFood(name: string, record: FoodMasterRecord): Promise<void> {
-  const key = normalize(name.trim());
-  if (!key) return;
-  try {
-    const filePath = getLearnedFoodsPath();
-    const dir = path.dirname(filePath);
-    await fs.mkdir(dir, { recursive: true });
-    const current = await loadLearnedFoods();
-    current[key] = record;
-    await fs.writeFile(filePath, JSON.stringify(current, null, 2), "utf-8");
-  } catch {
-    // サーバーレスなど書き込み不可の環境ではスキップ
-  }
+  // サーバーレス環境ではディレクトリ書き込み不可のためスキップ
+  return Promise.resolve();
 }
 
 /**

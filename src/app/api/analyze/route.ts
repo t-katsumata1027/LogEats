@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = 'edge';
+
 import OpenAI from "openai";
 import { GoogleGenAI, Type } from "@google/genai";
 import {
