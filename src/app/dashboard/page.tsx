@@ -2,6 +2,8 @@ import { auth } from "@/auth";
 import { SignIn, SignOut } from "@/components/AuthButtons";
 import { Dashboard } from "@/components/Dashboard";
 
+import { HeaderNav } from "@/components/HeaderNav";
+
 export default async function DashboardPage() {
     const session = await auth();
 
@@ -18,6 +20,7 @@ export default async function DashboardPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
+                        <HeaderNav />
                         {session?.user ? (
                             <div className="flex items-center gap-3">
                                 {session.user.image && (
