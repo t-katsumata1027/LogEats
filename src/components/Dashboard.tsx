@@ -63,7 +63,7 @@ export function Dashboard() {
     const todayTotal = todaysLogs.reduce((acc, log) => acc + log.total_calories, 0);
 
     return (
-        <div className="mt-12 border-t border-sage-200/60 pt-8">
+        <div className="py-2">
             <h2 className="text-xl font-semibold text-sage-800 mb-6 flex items-center gap-2">
                 <span>📊</span> あなたの食事記録
             </h2>

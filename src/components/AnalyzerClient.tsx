@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { ImageUpload } from "@/components/ImageUpload";
 import { NutritionResult } from "@/components/NutritionResult";
-import { Dashboard } from "@/components/Dashboard";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 
 export function AnalyzerClient() {
@@ -14,9 +14,8 @@ export function AnalyzerClient() {
     const [result, setResult] = useState<{
         foods: AnalyzedFood[];
         summary: NutritionSummary;
+        savedLogId?: number;
     } | null>(null);
-
-    const [refreshKey, setRefreshKey] = useState(0);
 
     const handleFileSelect = useCallback((file: File | null, preview: string | null) => {
         setImageFile(file);
@@ -40,12 +39,11 @@ export function AnalyzerClient() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "解析に失敗しました");
 
-            setResult({ foods: data.foods, summary: data.summary });
-
-            // 解析完了（＝DBへの保存も完了）したらダッシュボードを再読込させる
-            if (data.savedLogId) {
-                setRefreshKey(prev => prev + 1);
-            }
+            setResult({
+                foods: data.foods,
+                summary: data.summary,
+                savedLogId: data.savedLogId
+            });
         } catch (e) {
             setError(e instanceof Error ? e.message : "エラーが発生しました");
         } finally {
@@ -61,7 +59,7 @@ export function AnalyzerClient() {
     }, []);
 
     return (
-        <>
+        <div className="pb-8">
             <ImageUpload
                 imagePreview={imagePreview}
                 onFileSelect={handleFileSelect}
@@ -88,7 +86,19 @@ export function AnalyzerClient() {
                 />
             )}
 
-            <Dashboard key={refreshKey} />
-        </>
+            {result?.savedLogId && (
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white border border-sage-200 rounded-xl shadow-sm">
+                    <span className="text-sage-800 font-medium flex items-center gap-2">
+                        <span className="text-xl">✅</span> 食事履歴に保存しました
+                    </span>
+                    <Link
+                        href="/dashboard"
+                        className="text-sm px-4 py-2 bg-sage-50 text-sage-700 font-medium rounded-lg hover:bg-sage-100 transition-colors"
+                    >
+                        履歴を確認する →
+                    </Link>
+                </div>
+            )}
+        </div>
     );
 }
