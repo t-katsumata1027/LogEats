@@ -7,15 +7,20 @@ import { SettingsForm } from "@/components/SettingsForm";
 export default async function SettingsPage() {
     const session = await auth();
 
-    let targetCalories = null;
+    let userData = null;
     if (session?.user?.id) {
         try {
-            const { rows } = await sql`SELECT target_calories FROM users WHERE id = ${session.user.id} LIMIT 1`;
+            const { rows } = await sql`
+                SELECT target_calories, age, gender, height, weight, activity_level 
+                FROM users 
+                WHERE id = ${session.user.id} 
+                LIMIT 1
+            `;
             if (rows.length > 0) {
-                targetCalories = rows[0].target_calories;
+                userData = rows[0];
             }
         } catch (error) {
-            console.error("Failed to fetch target calories:", error);
+            console.error("Failed to fetch user data:", error);
         }
     }
 
@@ -61,7 +66,7 @@ export default async function SettingsPage() {
                         </div>
 
                         {/* 各種設定フォーム */}
-                        <SettingsForm initialTargetCalories={targetCalories} />
+                        <SettingsForm initialData={userData} />
                     </>
                 ) : (
                     <div className="bg-white rounded-2xl p-8 border border-sage-100 shadow-sm text-center">
