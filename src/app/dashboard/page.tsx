@@ -39,7 +39,7 @@ export default async function DashboardPage() {
                         <div>
                             <p className="font-medium mb-1">ログインして始めよう！</p>
                             <p className="text-sage-600">
-                                右上の「Googleでログイン」からログインすると、日々の食事を自動で記録して、ここでいつでも振り返ることができるようになります。
+                                右上の「ログイン」からログインすると、日々の食事を自動で記録して、ここでいつでも振り返ることができるようになります。
                             </p>
                         </div>
                     </div>

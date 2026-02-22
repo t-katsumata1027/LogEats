@@ -11,7 +11,7 @@ export default async function Home() {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-sage-800 tracking-tight">
-              食事カロリー推定
+              Log-Eats
             </h1>
             <p className="text-sm text-sage-600 mt-0.5">
               写真をアップロードすると、概算のカロリーと栄養素を表示します
@@ -39,7 +39,7 @@ export default async function Home() {
             <div>
               <p className="font-medium mb-1">食事の記録・振り返り機能が追加されました！</p>
               <p className="text-sage-600">
-                右上の「Googleでログイン」からログインすると、日々の食事カロリーやPFCバランスを自動で記録し、ダッシュボードで振り返ることができるようになります。
+                右上の「ログイン」からログインすると、日々の食事カロリーやPFCバランスを自動で記録し、ダッシュボードで振り返ることができるようになります。
               </p>
             </div>
           </div>
