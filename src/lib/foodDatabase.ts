@@ -52,53 +52,68 @@ function normalize(s: string): string {
     .replace(/[　\s]/g, "");
 }
 
-import fs from 'fs/promises';
-import path from 'path';
+import { sql } from '@vercel/postgres';
 
 export function getLearnedFoodsPath(): string {
-  return path.join(process.cwd(), "data", "learnedFoods.json");
+  return "";
 }
 
 /** 
  * 学習済み食品のロード。
- * Vercelのサーバーレス環境でもローカルでも、読み込みは可能です。
+ * Vercel Postgres データベースから学習済みの品目を一括で取得します。
  */
 export async function loadLearnedFoods(): Promise<Record<string, FoodMasterRecord>> {
   try {
-    const filePath = getLearnedFoodsPath();
-    const data = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(data);
-  } catch (err: any) {
-    if (err.code !== "ENOENT") {
-      console.warn("Learned foods load error:", err.message);
+    const { rows } = await sql`SELECT * FROM learned_foods`;
+    const recordMap: Record<string, FoodMasterRecord> = {};
+    for (const row of rows) {
+      recordMap[row.name] = {
+        unit_name: row.unit_name,
+        standard_weight_g: row.standard_weight_g,
+        per_100g: {
+          calories: row.calories,
+          protein: row.protein,
+          fat: row.fat,
+          carbs: row.carbs
+        }
+      };
     }
+    return recordMap;
+  } catch (err: any) {
+    console.warn("Learned foods load error (DB):", err.message);
     return {};
   }
 }
 
 /** 
  * 学習済みに1件追加する処理。
- * VercelのProduction環境では書き込み権限がないためスキップし、
- * ローカル(npm run dev)の場合のみファイルに永続化します。
+ * Vercel Postgres を利用しクラウド上のDBに永続化させます。（重複する名前の場合は上書き更新）
  */
 export async function addLearnedFood(name: string, record: FoodMasterRecord): Promise<void> {
   const key = normalize(name.trim());
 
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV) {
-    // Vercel などの ReadOnly なサーバーレス環境の場合、ファイル書き出しは行わずスキップ。
-    console.log(`[Vercel/Production] Add learned food skipped: ${key}`);
-    return Promise.resolve();
-  }
-
   try {
-    const data = await loadLearnedFoods();
-    data[key] = record;
-    const filePath = getLearnedFoodsPath();
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
-    console.log(`[Local] Learned food saved: ${key}`);
+    await sql`
+      INSERT INTO learned_foods (name, unit_name, standard_weight_g, calories, protein, fat, carbs)
+      VALUES (
+        ${key}, 
+        ${record.unit_name}, 
+        ${record.standard_weight_g}, 
+        ${record.per_100g.calories}, 
+        ${record.per_100g.protein}, 
+        ${record.per_100g.fat}, 
+        ${record.per_100g.carbs}
+      )
+      ON CONFLICT (name) DO UPDATE SET
+        standard_weight_g = EXCLUDED.standard_weight_g,
+        calories = EXCLUDED.calories,
+        protein = EXCLUDED.protein,
+        fat = EXCLUDED.fat,
+        carbs = EXCLUDED.carbs;
+    `;
+    console.log(`[DB] Learned food saved: ${key}`);
   } catch (err: any) {
-    console.error("Failed to save learned food:", err.message);
+    console.error("Failed to save learned food to DB:", err.message);
   }
 }
 
