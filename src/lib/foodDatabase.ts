@@ -52,32 +52,54 @@ function normalize(s: string): string {
     .replace(/[　\s]/g, "");
 }
 
-// ----------------------------------------------------
-// ※ Cloudflare Pages(Edge Runtime) などサーバーレス環境では
-//    fs（ファイルシステム）を用いたローカルディスクへの保存ができないため、
-//    静的DBのみを正として動作するようにファイルIOを無効化しています。
-// ----------------------------------------------------
+import fs from 'fs/promises';
+import path from 'path';
 
 export function getLearnedFoodsPath(): string {
-  // return path.join(process.cwd(), "data", "learnedFoods.json");
-  return "";
+  return path.join(process.cwd(), "data", "learnedFoods.json");
 }
 
 /** 
  * 学習済み食品のロード。
- * Cloudflare Pages デプロイ環境との互換性のため、常に空のオブジェクトを返します。
+ * Vercelのサーバーレス環境でもローカルでも、読み込みは可能です。
  */
 export async function loadLearnedFoods(): Promise<Record<string, FoodMasterRecord>> {
-  return {};
+  try {
+    const filePath = getLearnedFoodsPath();
+    const data = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(data);
+  } catch (err: any) {
+    if (err.code !== "ENOENT") {
+      console.warn("Learned foods load error:", err.message);
+    }
+    return {};
+  }
 }
 
 /** 
  * 学習済みに1件追加する処理。
- * デプロイ互換性のため何もしない（メモリ上でのみ処理し永続化はしない）状態に変更済みです。
+ * VercelのProduction環境では書き込み権限がないためスキップし、
+ * ローカル(npm run dev)の場合のみファイルに永続化します。
  */
 export async function addLearnedFood(name: string, record: FoodMasterRecord): Promise<void> {
-  // サーバーレス環境ではディレクトリ書き込み不可のためスキップ
-  return Promise.resolve();
+  const key = normalize(name.trim());
+
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV) {
+    // Vercel などの ReadOnly なサーバーレス環境の場合、ファイル書き出しは行わずスキップ。
+    console.log(`[Vercel/Production] Add learned food skipped: ${key}`);
+    return Promise.resolve();
+  }
+
+  try {
+    const data = await loadLearnedFoods();
+    data[key] = record;
+    const filePath = getLearnedFoodsPath();
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+    console.log(`[Local] Learned food saved: ${key}`);
+  } catch (err: any) {
+    console.error("Failed to save learned food:", err.message);
+  }
 }
 
 /**

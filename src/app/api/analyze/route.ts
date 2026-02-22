@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = 'edge';
+export const maxDuration = 60; // Vercel ホスティングにおけるAPIタイムアウトを最大化 (Proの場合は300など可能)
 
 import OpenAI from "openai";
 import {
