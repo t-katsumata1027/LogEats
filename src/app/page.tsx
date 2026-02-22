@@ -2,6 +2,8 @@ import { SignIn, SignOut } from "@/components/AuthButtons";
 import { auth } from "@/auth";
 import { AnalyzerClient } from "@/components/AnalyzerClient";
 
+import { HeaderNav } from "@/components/HeaderNav";
+
 export default async function Home() {
   const session = await auth();
 
@@ -18,6 +20,7 @@ export default async function Home() {
             </p>
           </div>
           <div className="flex items-center gap-4">
+            <HeaderNav />
             {session?.user ? (
               <div className="flex items-center gap-3">
                 {session.user.image && (

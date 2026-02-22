@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { SignIn, SignOut } from "@/components/AuthButtons";
 
+import { HeaderNav } from "@/components/HeaderNav";
+
 export default async function SettingsPage() {
     const session = await auth();
 
@@ -11,16 +13,19 @@ export default async function SettingsPage() {
                     <h1 className="text-xl font-semibold text-sage-800 tracking-tight">
                         設定
                     </h1>
-                    {session?.user ? (
-                        <div className="flex items-center gap-3">
-                            {session.user.image && (
-                                <img src={session.user.image} alt="Profile" className="w-8 h-8 rounded-full border border-sage-200" />
-                            )}
-                            <SignOut />
-                        </div>
-                    ) : (
-                        <SignIn />
-                    )}
+                    <div className="flex items-center gap-4">
+                        <HeaderNav />
+                        {session?.user ? (
+                            <div className="flex items-center gap-3">
+                                {session.user.image && (
+                                    <img src={session.user.image} alt="Profile" className="w-8 h-8 rounded-full border border-sage-200" />
+                                )}
+                                <SignOut />
+                            </div>
+                        ) : (
+                            <SignIn />
+                        )}
+                    </div>
                 </div>
             </header>
 
