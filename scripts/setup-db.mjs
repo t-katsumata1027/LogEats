@@ -20,7 +20,9 @@ if (fs.existsSync(envPath)) {
 async function setup() {
     try {
         console.log("データベースへ接続し、テーブルを作成します...");
-        const result = await sql`
+
+        // 1. learned_foods (既存: 共有学習データ)
+        await sql`
       CREATE TABLE IF NOT EXISTS learned_foods (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
@@ -33,7 +35,36 @@ async function setup() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
-        console.log("テーブルが正常に作成されました！");
+
+        // 2. users (新規: 個人のプロファイルと目標設定)
+        await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        image TEXT,
+        daily_calorie_target INTEGER DEFAULT 2000,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+        // 3. meal_logs (新規: 食事の履歴記録)
+        await sql`
+      CREATE TABLE IF NOT EXISTS meal_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        image_url TEXT,
+        meal_type VARCHAR(50) DEFAULT 'other',
+        total_calories REAL NOT NULL,
+        total_protein REAL NOT NULL,
+        total_fat REAL NOT NULL,
+        total_carbs REAL NOT NULL,
+        analyzed_data JSONB,
+        logged_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+        console.log("3つのテーブルが正常に作成・検証されました！");
         process.exit(0);
     } catch (e) {
         console.error("テーブルの作成に失敗しました:", e);

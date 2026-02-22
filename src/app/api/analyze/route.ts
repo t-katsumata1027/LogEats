@@ -11,6 +11,9 @@ import {
   type FoodMasterRecord,
 } from "@/lib/foodDatabase";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
+import { auth } from "@/auth";
+import { put } from "@vercel/blob";
+import { sql } from "@vercel/postgres";
 
 const PROMPT = `この写真に写っている料理・食品をすべて列挙し、JSONで返してください。
 フォーマットは必ず以下のJSONスキーマに従ってください:
@@ -308,7 +311,50 @@ export async function POST(request: NextRequest) {
     }
 
     const summary = buildSummary(foods);
-    return NextResponse.json({ foods, summary });
+
+    // --- Phase 2: ログイン中ユーザーなら画像をBlobへアップロードしDBに記録する ---
+    const session = await auth();
+    let imageUrl = null;
+    let savedLogId = null;
+
+    if (session?.user?.id) {
+      // 1. 画像をVercel Blobへアップロード (public access)
+      try {
+        const ext = image.name?.split('.').pop() || 'jpg';
+        const blobFilename = `meals/${session.user.id}_${Date.now()}.${ext}`;
+        const blobResult = await put(blobFilename, image, { access: 'public' });
+        imageUrl = blobResult.url;
+      } catch (e) {
+        console.error("Vercel Blob Upload Error:", e);
+        // 画像保存に失敗しても解析結果自体は返せるように続行
+      }
+
+      // 2. Postgres の meal_logs に記録を保存
+      try {
+        const { rows } = await sql`
+          INSERT INTO meal_logs (
+            user_id, image_url, total_calories, total_protein, 
+            total_fat, total_carbs, analyzed_data
+          ) VALUES (
+            ${session.user.id}, 
+            ${imageUrl}, 
+            ${summary.totalCalories}, 
+            ${summary.totalProtein}, 
+            ${summary.totalFat}, 
+            ${summary.totalCarbs}, 
+            ${JSON.stringify({ foods })}
+          )
+          RETURNING id;
+        `;
+        if (rows.length > 0) {
+          savedLogId = rows[0].id;
+        }
+      } catch (e) {
+        console.error("Database Insert Error:", e);
+      }
+    }
+
+    return NextResponse.json({ foods, summary, savedLogId });
   } catch (e) {
     console.error("=== API Analysis Error ===", e);
     const err = e as { status?: number; message?: string; code?: number };

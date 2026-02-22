@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { NutritionResult } from "@/components/NutritionResult";
+import { Dashboard } from "@/components/Dashboard";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 
 export function AnalyzerClient() {
@@ -14,6 +15,8 @@ export function AnalyzerClient() {
         foods: AnalyzedFood[];
         summary: NutritionSummary;
     } | null>(null);
+
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const handleFileSelect = useCallback((file: File | null, preview: string | null) => {
         setImageFile(file);
@@ -36,7 +39,13 @@ export function AnalyzerClient() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "解析に失敗しました");
+
             setResult({ foods: data.foods, summary: data.summary });
+
+            // 解析完了（＝DBへの保存も完了）したらダッシュボードを再読込させる
+            if (data.savedLogId) {
+                setRefreshKey(prev => prev + 1);
+            }
         } catch (e) {
             setError(e instanceof Error ? e.message : "エラーが発生しました");
         } finally {
@@ -78,6 +87,8 @@ export function AnalyzerClient() {
                     summary={result.summary}
                 />
             )}
+
+            <Dashboard key={refreshKey} />
         </>
     );
 }
