@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         }
 
         // ログイン中のユーザーの履歴を日時の新しい順に取得
-        const { rows } = await sql`
+        const { rows: logsRows } = await sql`
       SELECT 
         id, 
         image_url, 
@@ -36,7 +36,13 @@ export async function GET(request: NextRequest) {
       LIMIT ${limit}
     `;
 
-        return NextResponse.json({ logs: rows });
+        // ユーザーの目標カロリーも取得しておく
+        const { rows: userRows } = await sql`
+      SELECT target_calories FROM users WHERE id = ${session.user.id} LIMIT 1
+    `;
+        const targetCalories = userRows.length > 0 ? userRows[0].target_calories : null;
+
+        return NextResponse.json({ logs: logsRows, targetCalories });
     } catch (error) {
         console.error("Failed to fetch meal logs:", error);
         return NextResponse.json({ error: "Failed to fetch meal logs" }, { status: 500 });

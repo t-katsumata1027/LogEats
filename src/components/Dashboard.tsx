@@ -19,6 +19,7 @@ type MealLog = {
 
 export function Dashboard() {
     const [logs, setLogs] = useState<MealLog[]>([]);
+    const [targetCalories, setTargetCalories] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -113,6 +114,7 @@ export function Dashboard() {
                 }
                 const data = await res.json();
                 setLogs(data.logs || []);
+                setTargetCalories(data.targetCalories ?? null);
             } catch (err) {
                 setError(err instanceof Error ? err.message : "読込エラー");
             } finally {
@@ -142,6 +144,35 @@ export function Dashboard() {
 
     // カレンダーで「記録が存在する日」をハイライトするための配列
     const loggedDates = logs.map(log => new Date(log.logged_at));
+
+    const selectedProtein = filteredLogs.reduce((acc, log) => acc + log.total_protein, 0);
+    const selectedFat = filteredLogs.reduce((acc, log) => acc + log.total_fat, 0);
+    const selectedCarbs = filteredLogs.reduce((acc, log) => acc + log.total_carbs, 0);
+
+    const macroTotal = selectedProtein + selectedFat + selectedCarbs;
+    const proteinPct = macroTotal > 0 ? (selectedProtein / macroTotal) * 100 : 0;
+    const fatPct = macroTotal > 0 ? (selectedFat / macroTotal) * 100 : 0;
+    const carbsPct = macroTotal > 0 ? (selectedCarbs / macroTotal) * 100 : 0;
+
+    // 残りカロリーの計算と表示用テキスト
+    let targetDisplay = null;
+    let progressPct = 0;
+
+    if (targetCalories && targetCalories > 0) {
+        const remaining = targetCalories - selectedTotal;
+        progressPct = Math.min((selectedTotal / targetCalories) * 100, 100);
+
+        targetDisplay = (
+            <div className="mt-3 text-sm flex gap-2">
+                <span className="text-sage-600 font-medium">目標: {targetCalories}</span>
+                {remaining >= 0 ? (
+                    <span className="text-sage-600">| 残り <span className="font-bold text-sage-800">{Math.round(remaining)}</span> kcal</span>
+                ) : (
+                    <span className="text-red-500 font-bold border-l border-sage-200 pl-2"> {Math.round(Math.abs(remaining))} kcal オーバー！</span>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="py-2">
@@ -181,11 +212,21 @@ export function Dashboard() {
                                 {filterDateStr === new Date().toLocaleDateString() ? "今日" : selectedDate.toLocaleDateString([], { month: "short", day: "numeric" })}摂取したカロリー
                             </p>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-bold tracking-tight text-sage-900">
+                                <span className={`text-4xl font-bold tracking-tight ${targetCalories && selectedTotal > targetCalories ? 'text-red-500' : 'text-sage-900'}`}>
                                     {Math.round(selectedTotal).toLocaleString()}
                                 </span>
                                 <span className="text-sage-500 font-medium">kcal</span>
                             </div>
+                            {targetDisplay}
+
+                            {targetCalories && targetCalories > 0 && (
+                                <div className="w-full bg-sage-100 rounded-full h-2.5 mt-3 overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full transition-all duration-500 ${selectedTotal > targetCalories ? 'bg-red-400' : 'bg-sage-400'}`}
+                                        style={{ width: `${progressPct}%` }}
+                                    ></div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="w-full md:w-auto flex gap-4 text-sm">
