@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={noto.variable}>
+    <html lang="ja" data-theme="pastel">
       <body className="min-h-screen font-sans antialiased bg-cream text-sage-900 pb-20 sm:pb-0">
         {children}
         <BottomNav />

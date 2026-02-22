@@ -45,15 +45,15 @@ export function NutritionResult({ foods, summary }: NutritionResultProps) {
 
       <div>
         <h3 className="text-sm font-medium text-sage-700 mb-2">検出した料理・食品</h3>
-        <div className="overflow-x-auto rounded-xl border border-sage-200 bg-white">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-sage-50 text-sage-700 font-medium border-b border-sage-200">
+        <div className="overflow-x-auto rounded-box border border-sage-200 bg-base-100 shadow-sm">
+          <table className="table table-sm text-sage-700">
+            <thead className="bg-sage-50 text-sage-700 border-b border-sage-200">
               <tr>
-                <th className="px-4 py-3 whitespace-nowrap">料理・食品</th>
-                <th className="px-4 py-3 whitespace-nowrap text-right">カロリー</th>
-                <th className="px-4 py-3 whitespace-nowrap text-right">タンパク質</th>
-                <th className="px-4 py-3 whitespace-nowrap text-right">脂質</th>
-                <th className="px-4 py-3 whitespace-nowrap text-right">炭水化物</th>
+                <th className="font-semibold text-sm py-3">料理・食品</th>
+                <th className="font-semibold text-sm py-3 text-right">カロリー</th>
+                <th className="font-semibold text-sm py-3 text-right">タンパク質</th>
+                <th className="font-semibold text-sm py-3 text-right">脂質</th>
+                <th className="font-semibold text-sm py-3 text-right">炭水化物</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sage-100 text-sage-600">

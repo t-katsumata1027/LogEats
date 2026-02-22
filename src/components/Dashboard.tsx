@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
+import "react-day-picker/style.css";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 
 type MealLog = {
@@ -73,7 +73,7 @@ export function Dashboard() {
             </h2>
 
             {/* ----- カレンダー ----- */}
-            <div className="mb-8 flex justify-center bg-white p-4 rounded-2xl border border-sage-100 shadow-sm overflow-x-auto">
+            <div className="mb-8 flex justify-center card bg-base-100 border border-sage-100 shadow-sm p-4 overflow-x-auto">
                 <DayPicker
                     mode="single"
                     selected={selectedDate}
@@ -82,37 +82,23 @@ export function Dashboard() {
                     modifiersClassNames={{
                         hasLog: "font-bold text-sage-800 underline decoration-sage-400 decoration-2 underline-offset-4"
                     }}
-                    className="text-sage-800"
-                    classNames={{
-                        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                        month: "space-y-4 flex flex-col items-center",
-                        caption: "flex justify-center pt-1 relative items-center w-full mb-2",
-                        caption_label: "text-lg font-bold text-sage-900 tracking-tight",
-                        nav: "space-x-1 flex items-center absolute inset-y-0 right-0",
-                        nav_button: "h-8 w-8 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-sage-50 rounded-lg flex justify-center items-center text-sage-700 transition-all",
-                        table: "w-full border-collapse space-y-1 block",
-                        head_row: "flex w-full justify-between mb-2",
-                        head_cell: "text-sage-500 rounded-md w-10 font-medium text-xs text-center uppercase tracking-wider",
-                        row: "flex w-full mt-2 justify-between gap-1",
-                        cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-sage-100 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                        day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100 hover:bg-sage-100 rounded-full transition-colors",
-                        day_selected: "bg-sage-600 text-white hover:bg-sage-600 hover:text-white focus:bg-sage-600 focus:text-white font-bold",
-                        day_today: "text-sage-900 font-bold bg-sage-50",
-                        day_outside: "text-sage-300 opacity-50",
-                        day_disabled: "text-sage-300 opacity-50",
-                        day_hidden: "invisible",
-                    }}
+                    className="text-sage-800 p-2 mx-auto"
+                    style={{
+                        "--rdp-accent-color": "#4c5e43", /* sage-600 */
+                        "--rdp-accent-background-color": "#e3e8df", /* sage-100 */
+                        "--rdp-today-color": "#2d3529", /* sage-900 */
+                    } as React.CSSProperties}
                 />
             </div>
 
             {error ? (
-                <div className="p-4 rounded-xl bg-red-50 text-red-800 text-sm">
+                <div className="alert alert-error shadow-sm rounded-box text-sm">
                     {error}
                 </div>
             ) : (
                 <div className="space-y-8">
                     {/* ----- サマリーパネル ----- */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-sage-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="card bg-base-100 shadow-sm border border-sage-100 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
                         <div>
                             <p className="text-sage-600 text-sm font-medium mb-1">
                                 {filterDateStr === new Date().toLocaleDateString() ? "今日" : selectedDate.toLocaleDateString([], { month: "short", day: "numeric" })}摂取したカロリー
@@ -126,19 +112,19 @@ export function Dashboard() {
                         </div>
 
                         <div className="w-full md:w-auto flex gap-4 text-sm">
-                            <div className="bg-sage-50 px-4 py-3 rounded-xl flex-1 md:flex-none text-center">
+                            <div className="bg-sage-50 px-4 py-3 rounded-box flex-1 md:flex-none text-center">
                                 <div className="text-sage-500 mb-0.5 font-medium">Protein</div>
                                 <div className="font-bold text-sage-800">
                                     {Math.round(filteredLogs.reduce((acc, l) => acc + l.total_protein, 0))}g
                                 </div>
                             </div>
-                            <div className="bg-sage-50 px-4 py-3 rounded-xl flex-1 md:flex-none text-center">
+                            <div className="bg-sage-50 px-4 py-3 rounded-box flex-1 md:flex-none text-center">
                                 <div className="text-sage-500 mb-0.5 font-medium">Fat</div>
                                 <div className="font-bold text-sage-800">
                                     {Math.round(filteredLogs.reduce((acc, l) => acc + l.total_fat, 0))}g
                                 </div>
                             </div>
-                            <div className="bg-sage-50 px-4 py-3 rounded-xl flex-1 md:flex-none text-center">
+                            <div className="bg-sage-50 px-4 py-3 rounded-box flex-1 md:flex-none text-center">
                                 <div className="text-sage-500 mb-0.5 font-medium">Carbs</div>
                                 <div className="font-bold text-sage-800">
                                     {Math.round(filteredLogs.reduce((acc, l) => acc + l.total_carbs, 0))}g
@@ -166,18 +152,16 @@ export function Dashboard() {
                                     const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                                     return (
-                                        <div key={log.id} className="bg-white rounded-xl overflow-hidden border border-sage-100 shadow-sm flex flex-col">
-                                            {log.image_url ? (
-                                                <div className="h-32 bg-sage-100 relative">
+                                        <div key={log.id} className="card card-compact bg-base-100 border border-sage-100 shadow-sm">
+                                            <figure className="h-32 bg-sage-50 relative w-full">
+                                                {log.image_url ? (
                                                     <img src={log.image_url} alt="Meal" className="absolute inset-0 w-full h-full object-cover" />
-                                                </div>
-                                            ) : (
-                                                <div className="h-32 bg-sage-50 flex items-center justify-center text-sage-400">
-                                                    <span className="text-2xl">🍽️</span>
-                                                </div>
-                                            )}
-                                            <div className="p-4">
-                                                <div className="flex items-center justify-between mb-2">
+                                                ) : (
+                                                    <span className="text-2xl text-sage-400">🍽️</span>
+                                                )}
+                                            </figure>
+                                            <div className="card-body">
+                                                <div className="flex items-center justify-between mb-1">
                                                     <span className="inline-flex items-center text-xs font-semibold px-2 py-1 rounded-full bg-sage-50 border border-sage-200 text-sage-700">
                                                         🕒 {timeStr}
                                                     </span>
