@@ -7,25 +7,28 @@ export function HeaderNav() {
     const pathname = usePathname();
 
     return (
-        <nav className="hidden sm:flex items-center gap-6 mr-4 text-sm font-medium">
+        <div role="tablist" className="tabs tabs-boxed bg-transparent mr-4 flex-nowrap shrink-0">
             <Link
                 href="/"
-                className={`transition-colors py-1 border-b-2 ${pathname === '/' ? 'border-sage-600 text-sage-900' : 'border-transparent text-sage-500 hover:text-sage-700'}`}
+                role="tab"
+                className={`tab tab-sm sm:tab-md whitespace-nowrap px-3 ${pathname === '/' ? 'tab-active bg-sage-100 text-sage-900 font-bold' : 'text-sage-600 hover:text-sage-800'}`}
             >
                 記録
             </Link>
             <Link
                 href="/dashboard"
-                className={`transition-colors py-1 border-b-2 ${pathname === '/dashboard' ? 'border-sage-600 text-sage-900' : 'border-transparent text-sage-500 hover:text-sage-700'}`}
+                role="tab"
+                className={`tab tab-sm sm:tab-md whitespace-nowrap px-3 ${pathname === '/dashboard' ? 'tab-active bg-sage-100 text-sage-900 font-bold' : 'text-sage-600 hover:text-sage-800'}`}
             >
                 履歴
             </Link>
             <Link
                 href="/settings"
-                className={`transition-colors py-1 border-b-2 ${pathname === '/settings' ? 'border-sage-600 text-sage-900' : 'border-transparent text-sage-500 hover:text-sage-700'}`}
+                role="tab"
+                className={`tab tab-sm sm:tab-md whitespace-nowrap px-3 ${pathname === '/settings' ? 'tab-active bg-sage-100 text-sage-900 font-bold' : 'text-sage-600 hover:text-sage-800'}`}
             >
                 設定
             </Link>
-        </nav>
+        </div>
     );
 }

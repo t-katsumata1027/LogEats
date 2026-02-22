@@ -10,7 +10,7 @@ export function SignIn() {
         >
             <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-sage-600 rounded-lg hover:bg-sage-700 transition-colors"
+                className="btn btn-sm sm:btn-md bg-sage-600 text-white hover:bg-sage-700 border-none shadow-sm whitespace-nowrap"
             >
                 ログイン
             </button>
@@ -28,7 +28,7 @@ export function SignOut() {
         >
             <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-sage-700 bg-sage-100 rounded-lg hover:bg-sage-200 transition-colors"
+                className="btn btn-sm bg-sage-100 text-sage-700 hover:bg-sage-200 border-none shadow-sm whitespace-nowrap px-3"
             >
                 ログアウト
             </button>

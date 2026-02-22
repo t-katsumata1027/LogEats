@@ -87,13 +87,13 @@ export function AnalyzerClient() {
             )}
 
             {result?.savedLogId && (
-                <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white border border-sage-200 rounded-xl shadow-sm">
+                <div className="mt-6 flex flex-col sm:flex-row shadow-sm bg-white rounded-box border border-sage-200 p-4 items-center justify-between gap-4">
                     <span className="text-sage-800 font-medium flex items-center gap-2">
                         <span className="text-xl">✅</span> 食事履歴に保存しました
                     </span>
                     <Link
                         href="/dashboard"
-                        className="text-sm px-4 py-2 bg-sage-50 text-sage-700 font-medium rounded-lg hover:bg-sage-100 transition-colors"
+                        className="btn btn-sm sm:btn-md bg-sage-50 text-sage-800 border-sage-200 hover:bg-sage-100 shadow-sm"
                     >
                         履歴を確認する →
                     </Link>

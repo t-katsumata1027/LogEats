@@ -99,9 +99,14 @@ export function ImageUpload({
                     type="button"
                     onClick={onAnalyze}
                     disabled={loading || isCompressing}
-                    className="px-6 py-2.5 rounded-xl bg-sage-600 text-white text-sm font-medium hover:bg-sage-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
+                    className="btn bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm"
                   >
-                    {isCompressing ? "画像を最適化中…" : loading ? "解析中…" : "カロリーを解析"}
+                    {isCompressing ? "画像を最適化中…" : loading ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        解析中…
+                      </>
+                    ) : "カロリーを解析"}
                   </button>
                 )}
                 <button
@@ -111,7 +116,7 @@ export function ImageUpload({
                     if (inputRef.current) inputRef.current.value = "";
                   }}
                   disabled={loading || isCompressing}
-                  className="px-6 py-2.5 rounded-xl border border-sage-300 bg-white text-sage-700 text-sm font-medium hover:bg-sage-50 disabled:opacity-60 transition-colors shadow-sm"
+                  className="btn bg-white hover:bg-sage-50 text-sage-700 border-sage-200 shadow-sm"
                 >
                   別の写真を選ぶ
                 </button>
