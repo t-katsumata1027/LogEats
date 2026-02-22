@@ -7,7 +7,7 @@ export function HeaderNav() {
     const pathname = usePathname();
 
     return (
-        <div role="tablist" className="tabs tabs-boxed bg-transparent mr-4 flex-nowrap shrink-0">
+        <div role="tablist" className="hidden sm:flex tabs tabs-boxed bg-transparent mr-4 flex-nowrap shrink-0">
             <Link
                 href="/"
                 role="tab"
