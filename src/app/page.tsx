@@ -33,17 +33,18 @@ export default async function Home() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-8">
-        {!session ? (
-          <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-sage-100 flex flex-col items-center gap-4 cursor-default">
-            <h2 className="text-lg font-medium text-sage-800">ログインして記録を開始</h2>
-            <p className="text-sage-600 mb-2">
-              食事を記録・分析するには、Googleアカウントでのログインが必要です。
-            </p>
-            <SignIn />
+        {!session && (
+          <div className="mb-6 p-4 rounded-xl bg-sage-50 border border-sage-200 text-sm text-sage-800 flex items-start gap-3">
+            <span className="text-xl">💡</span>
+            <div>
+              <p className="font-medium mb-1">食事の記録・振り返り機能が追加されました！</p>
+              <p className="text-sage-600">
+                右上の「Googleでログイン」からログインすると、日々の食事カロリーやPFCバランスを自動で記録し、ダッシュボードで振り返ることができるようになります。
+              </p>
+            </div>
           </div>
-        ) : (
-          <AnalyzerClient />
         )}
+        <AnalyzerClient />
       </div>
     </main>
   );
