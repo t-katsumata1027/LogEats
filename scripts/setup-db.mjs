@@ -4,25 +4,25 @@ import { sql } from '@vercel/postgres';
 // .env.local から環境変数を読み込んで process.env にセットする
 const envPath = '.env.local';
 if (fs.existsSync(envPath)) {
-    const envFile = fs.readFileSync(envPath, 'utf8');
-    envFile.split('\n').forEach(line => {
-        const match = line.match(/^(?!#)([^=]+)=(.*)$/);
-        if (match) {
-            let val = match[2].trim();
-            if (val.startsWith('"') && val.endsWith('"')) {
-                val = val.slice(1, -1);
-            }
-            process.env[match[1].trim()] = val;
-        }
-    });
+  const envFile = fs.readFileSync(envPath, 'utf8');
+  envFile.split('\n').forEach(line => {
+    const match = line.match(/^(?!#)([^=]+)=(.*)$/);
+    if (match) {
+      let val = match[2].trim();
+      if (val.startsWith('"') && val.endsWith('"')) {
+        val = val.slice(1, -1);
+      }
+      process.env[match[1].trim()] = val;
+    }
+  });
 }
 
 async function setup() {
-    try {
-        console.log("データベースへ接続し、テーブルを作成します...");
+  try {
+    console.log("データベースへ接続し、テーブルを作成します...");
 
-        // 1. learned_foods (既存: 共有学習データ)
-        await sql`
+    // 1. learned_foods (既存: 共有学習データ)
+    await sql`
       CREATE TABLE IF NOT EXISTS learned_foods (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
@@ -36,20 +36,20 @@ async function setup() {
       );
     `;
 
-        // 2. users (新規: 個人のプロファイルと目標設定)
-        await sql`
+    // 2. users (新規: 個人のプロファイルと目標設定)
+    await sql`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255),
         email VARCHAR(255) UNIQUE NOT NULL,
         image TEXT,
-        daily_calorie_target INTEGER DEFAULT 2000,
+        target_calories INTEGER DEFAULT 2000,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
 
-        // 3. meal_logs (新規: 食事の履歴記録)
-        await sql`
+    // 3. meal_logs (新規: 食事の履歴記録)
+    await sql`
       CREATE TABLE IF NOT EXISTS meal_logs (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -64,12 +64,12 @@ async function setup() {
       );
     `;
 
-        console.log("3つのテーブルが正常に作成・検証されました！");
-        process.exit(0);
-    } catch (e) {
-        console.error("テーブルの作成に失敗しました:", e);
-        process.exit(1);
-    }
+    console.log("3つのテーブルが正常に作成・検証されました！");
+    process.exit(0);
+  } catch (e) {
+    console.error("テーブルの作成に失敗しました:", e);
+    process.exit(1);
+  }
 }
 
 setup();
