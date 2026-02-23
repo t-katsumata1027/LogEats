@@ -10,19 +10,19 @@ export default async function DashboardPage() {
     return (
         <main className="min-h-screen">
             <header className="border-b border-sage-200/60 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-                <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-                    <div>
+                <div className="max-w-2xl mx-auto px-4 py-3 flex items-start justify-between gap-4">
+                    <div className="flex-1">
                         <h1 className="text-xl font-semibold text-sage-800 tracking-tight">
                             食事の履歴
                         </h1>
-                        <p className="text-[13px] text-sage-600 mt-0.5">
+                        <p className="text-xs sm:text-[13px] text-sage-600 mt-1 leading-snug">
                             日々のカロリー摂取量とPFCバランスの振り返り
                         </p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                         <HeaderNav />
                         {session?.user ? (
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3">
                                 {session.user.image && (
                                     <img src={session.user.image} alt="User avatar" className="w-8 h-8 rounded-full border border-sage-200" />
                                 )}

@@ -10,12 +10,12 @@ export default async function Home() {
   return (
     <main className="min-h-screen">
       <header className="border-b border-sage-200/60 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-start justify-between gap-4">
+          <div className="flex-1">
             <h1 className="text-xl font-semibold text-sage-800 tracking-tight">
               Log-Eats
             </h1>
-            <p className="text-sm text-sage-600 mt-0.5">
+            <p className="text-xs sm:text-sm text-sage-600 mt-1 leading-snug">
               写真をアップロードすると、概算のカロリーと栄養素を表示します
             </p>
           </div>
