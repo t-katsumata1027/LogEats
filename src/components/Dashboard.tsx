@@ -115,6 +115,7 @@ export function Dashboard() {
                 total_carbs: editValues.total_carbs,
                 analyzed_data: { foods: editValues.foods }
             } : l));
+            fetchData(); // 目標カロリー等の再取得
             closeModal();
         } catch (err) {
             alert(err instanceof Error ? err.message : "エラーが発生しました");
@@ -161,6 +162,7 @@ export function Dashboard() {
             });
 
             setReanalyzePrompt("");
+            fetchData(); // 最新状態を再取得
 
         } catch (err) {
             alert(err instanceof Error ? err.message : "エラーが発生しました");
@@ -215,27 +217,28 @@ export function Dashboard() {
         });
     };
 
-    useEffect(() => {
-        async function fetchLogs() {
-            try {
-                const res = await fetch("/api/logs");
-                if (!res.ok) {
-                    if (res.status === 401) {
-                        setLoading(false);
-                        return;
-                    }
-                    throw new Error("履歴データの取得に失敗しました");
+    const fetchData = async () => {
+        try {
+            const res = await fetch("/api/logs", { cache: "no-store" });
+            if (!res.ok) {
+                if (res.status === 401) {
+                    setLoading(false);
+                    return;
                 }
-                const data = await res.json();
-                setLogs(data.logs || []);
-                setTargetCalories(data.targetCalories ?? null);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "読込エラー");
-            } finally {
-                setLoading(false);
+                throw new Error("履歴データの取得に失敗しました");
             }
+            const data = await res.json();
+            setLogs(data.logs || []);
+            setTargetCalories(data.targetCalories ?? null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "読込エラー");
+        } finally {
+            setLoading(false);
         }
-        fetchLogs();
+    };
+
+    useEffect(() => {
+        fetchData();
     }, []);
 
     if (loading) {
@@ -254,7 +257,10 @@ export function Dashboard() {
     // 選択された日付のログだけを抽出
     const filterDateStr = selectedDate.toLocaleDateString();
     const filteredLogs = logs.filter(log => new Date(log.logged_at).toLocaleDateString() === filterDateStr);
-    const selectedTotal = filteredLogs.reduce((acc, log) => acc + log.total_calories, 0);
+    const selectedTotal = filteredLogs.reduce((acc, log) => acc + Number(log.total_calories || 0), 0);
+    const selectedProtein = filteredLogs.reduce((acc, log) => acc + Number(log.total_protein || 0), 0);
+    const selectedFat = filteredLogs.reduce((acc, log) => acc + Number(log.total_fat || 0), 0);
+    const selectedCarbs = filteredLogs.reduce((acc, log) => acc + Number(log.total_carbs || 0), 0);
 
     // カレンダーで「記録が存在する日」をハイライトするための配列
     const loggedDates = logs.map(log => new Date(log.logged_at));
@@ -273,10 +279,6 @@ export function Dashboard() {
         });
     };
     const weekDays = getWeekDays(selectedDate);
-
-    const selectedProtein = filteredLogs.reduce((acc, log) => acc + log.total_protein, 0);
-    const selectedFat = filteredLogs.reduce((acc, log) => acc + log.total_fat, 0);
-    const selectedCarbs = filteredLogs.reduce((acc, log) => acc + log.total_carbs, 0);
 
     const macroTotal = selectedProtein + selectedFat + selectedCarbs;
     const proteinPct = macroTotal > 0 ? (selectedProtein / macroTotal) * 100 : 0;
@@ -418,19 +420,19 @@ export function Dashboard() {
                             <div className="bg-sage-50 px-4 py-3 rounded-box flex-1 md:flex-none text-center">
                                 <div className="text-sage-500 mb-0.5 font-medium">Protein</div>
                                 <div className="font-bold text-sage-800">
-                                    {Math.round(filteredLogs.reduce((acc, l) => acc + l.total_protein, 0))}g
+                                    {Math.round(selectedProtein)}g
                                 </div>
                             </div>
                             <div className="bg-sage-50 px-4 py-3 rounded-box flex-1 md:flex-none text-center">
                                 <div className="text-sage-500 mb-0.5 font-medium">Fat</div>
                                 <div className="font-bold text-sage-800">
-                                    {Math.round(filteredLogs.reduce((acc, l) => acc + l.total_fat, 0))}g
+                                    {Math.round(selectedFat)}g
                                 </div>
                             </div>
                             <div className="bg-sage-50 px-4 py-3 rounded-box flex-1 md:flex-none text-center">
                                 <div className="text-sage-500 mb-0.5 font-medium">Carbs</div>
                                 <div className="font-bold text-sage-800">
-                                    {Math.round(filteredLogs.reduce((acc, l) => acc + l.total_carbs, 0))}g
+                                    {Math.round(selectedCarbs)}g
                                 </div>
                             </div>
                         </div>
