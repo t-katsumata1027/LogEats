@@ -23,6 +23,7 @@ export function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
 
     // --- モーダル・詳細編集用のState ---
     const [selectedLog, setSelectedLog] = useState<MealLog | null>(null);
@@ -31,9 +32,31 @@ export function Dashboard() {
         total_calories: 0,
         total_protein: 0,
         total_fat: 0,
-        total_carbs: 0
+        total_carbs: 0,
+        foods: [] as AnalyzedFood[]
     });
     const [isSaving, setIsSaving] = useState(false);
+
+    // --- AI再計算用のState ---
+    const [reanalyzePrompt, setReanalyzePrompt] = useState("");
+    const [isReanalyzing, setIsReanalyzing] = useState(false);
+    const [reanalyzeProgress, setReanalyzeProgress] = useState(0);
+
+    // AI再計算のプログレスバーアニメーション
+    useEffect(() => {
+        if (isReanalyzing) {
+            setReanalyzeProgress(0);
+            const interval = setInterval(() => {
+                setReanalyzeProgress(prev => {
+                    if (prev >= 95) return prev;
+                    return prev + Math.max(0.5, (100 - prev) / 20);
+                });
+            }, 100);
+            return () => clearInterval(interval);
+        } else {
+            setReanalyzeProgress(0);
+        }
+    }, [isReanalyzing]);
 
     const openModal = (log: MealLog) => {
         setSelectedLog(log);
@@ -42,8 +65,10 @@ export function Dashboard() {
             total_calories: Math.round(log.total_calories),
             total_protein: Math.round(log.total_protein),
             total_fat: Math.round(log.total_fat),
-            total_carbs: Math.round(log.total_carbs)
+            total_carbs: Math.round(log.total_carbs),
+            foods: log.analyzed_data?.foods ? JSON.parse(JSON.stringify(log.analyzed_data.foods)) : []
         });
+        setReanalyzePrompt("");
         const modal = document.getElementById('meal_detail_modal') as HTMLDialogElement;
         if (modal) modal.showModal();
     };
@@ -73,10 +98,11 @@ export function Dashboard() {
         if (!selectedLog) return;
         setIsSaving(true);
         try {
+            const payload = { ...editValues, analyzed_data: { foods: editValues.foods } };
             const res = await fetch(`/api/logs/${selectedLog.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editValues)
+                body: JSON.stringify(payload)
             });
             if (!res.ok) throw new Error("更新に失敗しました");
 
@@ -86,7 +112,8 @@ export function Dashboard() {
                 total_calories: editValues.total_calories,
                 total_protein: editValues.total_protein,
                 total_fat: editValues.total_fat,
-                total_carbs: editValues.total_carbs
+                total_carbs: editValues.total_carbs,
+                analyzed_data: { foods: editValues.foods }
             } : l));
             closeModal();
         } catch (err) {
@@ -96,9 +123,96 @@ export function Dashboard() {
         }
     };
 
+    const handleReanalyze = async () => {
+        if (!selectedLog || !reanalyzePrompt.trim()) return;
+        setIsReanalyzing(true);
+        try {
+            const res = await fetch(`/api/logs/${selectedLog.id}/reanalyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    instruction: reanalyzePrompt,
+                    previous_foods: selectedLog.analyzed_data?.foods || []
+                })
+            });
+            if (!res.ok) throw new Error("AIの再計算に失敗しました");
+            const data = await res.json();
+
+            // 成功したら画面を更新
+            const newValues = {
+                total_calories: data.updatedData.total_calories,
+                total_protein: data.updatedData.total_protein,
+                total_fat: data.updatedData.total_fat,
+                total_carbs: data.updatedData.total_carbs,
+                analyzed_data: data.updatedData.analyzed_data
+            };
+
+            setLogs(logs.map(l => l.id === selectedLog.id ? { ...l, ...newValues } : l));
+
+            setSelectedLog(prev => prev ? { ...prev, ...newValues } : null);
+
+            // 編集モードの状態も更新する（AIの変更結果をそのまま画面に入力フォームとして反映）
+            setEditValues({
+                total_calories: Math.round(newValues.total_calories),
+                total_protein: Math.round(newValues.total_protein),
+                total_fat: Math.round(newValues.total_fat),
+                total_carbs: Math.round(newValues.total_carbs),
+                foods: newValues.analyzed_data?.foods ? JSON.parse(JSON.stringify(newValues.analyzed_data.foods)) : []
+            });
+
+            setReanalyzePrompt("");
+
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "エラーが発生しました");
+        } finally {
+            setIsReanalyzing(false);
+        }
+    };
+
     const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setEditValues(prev => ({ ...prev, [name]: Number(value) || 0 }));
+    };
+
+    const handleFoodEditChange = (index: number, field: keyof AnalyzedFood, value: string | number) => {
+        setEditValues(prev => {
+            const newFoods = [...prev.foods];
+            newFoods[index] = { ...newFoods[index], [field]: value };
+
+            // Recalculate totals
+            const totalCals = newFoods.reduce((sum, f) => sum + Number(f.calories || 0), 0);
+            const totalPro = newFoods.reduce((sum, f) => sum + Number(f.protein || 0), 0);
+            const totalFat = newFoods.reduce((sum, f) => sum + Number(f.fat || 0), 0);
+            const totalCarb = newFoods.reduce((sum, f) => sum + Number(f.carbs || 0), 0);
+
+            return {
+                ...prev,
+                foods: newFoods,
+                total_calories: Math.round(totalCals),
+                total_protein: Math.round(totalPro),
+                total_fat: Math.round(totalFat),
+                total_carbs: Math.round(totalCarb)
+            };
+        });
+    };
+
+    const handleRemoveFood = (index: number) => {
+        setEditValues(prev => {
+            const newFoods = prev.foods.filter((_, i) => i !== index);
+            const totalCals = newFoods.reduce((sum, f) => sum + Number(f.calories || 0), 0);
+            const totalPro = newFoods.reduce((sum, f) => sum + Number(f.protein || 0), 0);
+            const totalFat = newFoods.reduce((sum, f) => sum + Number(f.fat || 0), 0);
+            const totalCarb = newFoods.reduce((sum, f) => sum + Number(f.carbs || 0), 0);
+
+            return {
+                ...prev,
+                foods: newFoods,
+                total_calories: Math.round(totalCals),
+                total_protein: Math.round(totalPro),
+                total_fat: Math.round(totalFat),
+                total_carbs: Math.round(totalCarb)
+            };
+        });
     };
 
     useEffect(() => {
@@ -145,6 +259,21 @@ export function Dashboard() {
     // カレンダーで「記録が存在する日」をハイライトするための配列
     const loggedDates = logs.map(log => new Date(log.logged_at));
 
+    // 週表示用の日付生成 (選択された日を含む週の月曜日〜日曜日)
+    const getWeekDays = (date: Date) => {
+        const current = new Date(date);
+        const day = current.getDay();
+        const diff = current.getDate() - day + (day === 0 ? -6 : 1); // 月曜始まり
+        const monday = new Date(current.setDate(diff));
+
+        return Array.from({ length: 7 }).map((_, i) => {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            return d;
+        });
+    };
+    const weekDays = getWeekDays(selectedDate);
+
     const selectedProtein = filteredLogs.reduce((acc, log) => acc + log.total_protein, 0);
     const selectedFat = filteredLogs.reduce((acc, log) => acc + log.total_fat, 0);
     const selectedCarbs = filteredLogs.reduce((acc, log) => acc + log.total_carbs, 0);
@@ -181,22 +310,78 @@ export function Dashboard() {
             </h2>
 
             {/* ----- カレンダー ----- */}
-            <div className="mb-8 flex justify-center card bg-base-100 border border-sage-100 shadow-sm p-4 overflow-x-auto">
-                <DayPicker
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    modifiers={{ hasLog: loggedDates }}
-                    modifiersClassNames={{
-                        hasLog: "font-bold text-sage-800 underline decoration-sage-400 decoration-2 underline-offset-4"
-                    }}
-                    className="text-sage-800 p-2 mx-auto"
-                    style={{
-                        "--rdp-accent-color": "#4c5e43", /* sage-600 */
-                        "--rdp-accent-background-color": "#e3e8df", /* sage-100 */
-                        "--rdp-today-color": "#2d3529", /* sage-900 */
-                    } as React.CSSProperties}
-                />
+            <div className="mb-8 card bg-base-100 border border-sage-100 shadow-sm p-4">
+                <div className="flex justify-between items-center mb-4 px-2">
+                    <h3 className="text-sm font-bold text-sage-800">
+                        {selectedDate.toLocaleDateString([], { year: 'numeric', month: 'short' })}
+                    </h3>
+
+                    <div className="bg-sage-100/50 p-1 rounded-lg flex items-center gap-1">
+                        <button
+                            onClick={() => setIsCalendarExpanded(false)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${!isCalendarExpanded ? 'bg-white text-sage-800 shadow-sm border border-sage-200/50' : 'text-sage-500 hover:text-sage-700 hover:bg-sage-200/50'}`}
+                        >
+                            週表示
+                        </button>
+                        <button
+                            onClick={() => setIsCalendarExpanded(true)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${isCalendarExpanded ? 'bg-white text-sage-800 shadow-sm border border-sage-200/50' : 'text-sage-500 hover:text-sage-700 hover:bg-sage-200/50'}`}
+                        >
+                            月表示
+                        </button>
+                    </div>
+                </div>
+
+                {!isCalendarExpanded ? (
+                    /* 週表示ストリップ */
+                    <div className="flex justify-between items-center px-1 sm:px-4">
+                        {weekDays.map((date, i) => {
+                            const isSelected = date.toLocaleDateString() === selectedDate.toLocaleDateString();
+                            const isToday = date.toLocaleDateString() === new Date().toLocaleDateString();
+                            const hasLog = loggedDates.some(ld => ld.toLocaleDateString() === date.toLocaleDateString());
+                            const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
+
+                            return (
+                                <button
+                                    key={i}
+                                    onClick={() => setSelectedDate(date)}
+                                    className={`flex flex-col items-center justify-center p-2 rounded-xl w-10 sm:w-12 transition-colors ${isSelected
+                                        ? 'bg-sage-600 text-white shadow-md'
+                                        : isToday
+                                            ? 'bg-sage-100 text-sage-900 border border-sage-200'
+                                            : 'text-sage-600 hover:bg-sage-50'
+                                        }`}
+                                >
+                                    <span className={`text-[10px] font-medium mb-1 ${isSelected ? 'text-sage-100' : 'text-sage-400'}`}>
+                                        {dayNames[i]}
+                                    </span>
+                                    <span className={`text-base font-bold pb-0.5 ${hasLog && !isSelected ? 'underline decoration-sage-400 decoration-2 underline-offset-4' : ''}`}>
+                                        {date.getDate()}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    /* react-day-picker (月表示) */
+                    <div className="flex justify-center overflow-x-auto">
+                        <DayPicker
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => date && setSelectedDate(date)}
+                            modifiers={{ hasLog: loggedDates }}
+                            modifiersClassNames={{
+                                hasLog: "font-bold text-sage-800 underline decoration-sage-400 decoration-2 underline-offset-4"
+                            }}
+                            className="text-sage-800 p-2 mx-auto"
+                            style={{
+                                "--rdp-accent-color": "#4c5e43", /* sage-600 */
+                                "--rdp-accent-background-color": "#e3e8df", /* sage-100 */
+                                "--rdp-today-color": "#2d3529", /* sage-900 */
+                            } as React.CSSProperties}
+                        />
+                    </div>
+                )}
             </div>
 
             {error ? (
@@ -392,34 +577,112 @@ export function Dashboard() {
                                     /* --- 編集モード --- */
                                     <div className="space-y-4">
                                         <div className="alert bg-orange-50 border-orange-100 text-orange-800 text-sm py-2">
-                                            <span>💡 実際の分量と違った場合など、栄養素を手動で修正できます。</span>
+                                            <span>💡 実際の表示と違っていた場合は、テキストでAIに再計算を依頼するか、直接数値を修正できます。</span>
                                         </div>
 
-                                        <div className="form-control">
-                                            <label className="label py-1"><span className="label-text font-bold text-sage-700">合計カロリー (kcal)</span></label>
-                                            <input type="number" min="0" name="total_calories" value={editValues.total_calories} onChange={handleEditChange} className="input input-bordered input-sm bg-white" />
+                                        {/* AI再計算エリア */}
+                                        <div className="bg-sage-50 p-4 rounded-xl border border-sage-100">
+                                            <label className="text-xs font-bold text-sage-700 mb-2 block">🤖 AIに修正を指示する</label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="例: ご飯は少なめだった、カレーではなくハヤシライス等"
+                                                    className="input input-bordered input-sm flex-1 bg-white"
+                                                    value={reanalyzePrompt}
+                                                    onChange={e => setReanalyzePrompt(e.target.value)}
+                                                    onKeyDown={e => { if (e.key === 'Enter') handleReanalyze(); }}
+                                                    disabled={isReanalyzing}
+                                                />
+                                                <button
+                                                    className="btn btn-sm btn-primary bg-sage-600 hover:bg-sage-700 border-none text-white disabled:bg-sage-200 disabled:text-sage-400"
+                                                    onClick={handleReanalyze}
+                                                    disabled={isReanalyzing || !reanalyzePrompt.trim()}
+                                                >
+                                                    {isReanalyzing ? <span className="loading loading-spinner loading-xs"></span> : 'AI再計算'}
+                                                </button>
+                                            </div>
+
+                                            {isReanalyzing && (
+                                                <div className="mt-3 p-3 bg-white rounded-lg border border-sage-200 shadow-inner flex flex-col items-center gap-2 animate-fade-in-up">
+                                                    <div className="flex items-center gap-2 text-sage-800 font-bold text-sm">
+                                                        <span className="animate-pulse">🔄 AIが指示に基づいて再計算しています...</span>
+                                                    </div>
+                                                    <progress className="progress progress-success w-full" value={reanalyzeProgress} max="100"></progress>
+                                                    <p className="text-[10px] text-sage-500">※5秒〜10秒ほどかかる場合があります</p>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div className="form-control">
-                                                <label className="label py-1"><span className="label-text text-xs text-sage-600">タンパク質 (g)</span></label>
-                                                <input type="number" min="0" name="total_protein" value={editValues.total_protein} onChange={handleEditChange} className="input input-bordered input-sm bg-white w-full" />
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label py-1"><span className="label-text text-xs text-sage-600">脂質 (g)</span></label>
-                                                <input type="number" min="0" name="total_fat" value={editValues.total_fat} onChange={handleEditChange} className="input input-bordered input-sm bg-white w-full" />
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label py-1"><span className="label-text text-xs text-sage-600">炭水化物 (g)</span></label>
-                                                <input type="number" min="0" name="total_carbs" value={editValues.total_carbs} onChange={handleEditChange} className="input input-bordered input-sm bg-white w-full" />
+                                        {/* 個別料理の編集エリア */}
+                                        <div>
+                                            <h4 className="text-sm font-bold text-sage-800 border-b border-sage-100 pb-2 mb-3 mt-4">構成要素の手動調整</h4>
+                                            <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                                                {editValues.foods.map((food, idx) => (
+                                                    <div key={idx} className="bg-white border border-sage-200 rounded-lg p-2.5 flex flex-col gap-2 relative">
+                                                        <button
+                                                            onClick={() => handleRemoveFood(idx)}
+                                                            className="absolute -top-2 -right-2 btn btn-xs btn-circle bg-red-100 text-red-500 hover:bg-red-500 hover:text-white border-none"
+                                                            title="この料理を削除"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                className="input input-bordered input-xs flex-1 font-bold text-sage-800"
+                                                                value={food.name}
+                                                                onChange={(e) => handleFoodEditChange(idx, 'name', e.target.value)}
+                                                                placeholder="料理名"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                className="input input-bordered input-xs w-20"
+                                                                value={food.amount || ''}
+                                                                onChange={(e) => handleFoodEditChange(idx, 'amount', e.target.value)}
+                                                                placeholder="量目安"
+                                                            />
+                                                        </div>
+                                                        <div className="grid grid-cols-4 gap-2">
+                                                            <div>
+                                                                <span className="text-[10px] text-sage-500 block mb-0.5">kcal</span>
+                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.calories} onChange={(e) => handleFoodEditChange(idx, 'calories', Number(e.target.value) || 0)} />
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-sage-500 block mb-0.5">Pro (g)</span>
+                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.protein} onChange={(e) => handleFoodEditChange(idx, 'protein', Number(e.target.value) || 0)} />
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-sage-500 block mb-0.5">Fat (g)</span>
+                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.fat} onChange={(e) => handleFoodEditChange(idx, 'fat', Number(e.target.value) || 0)} />
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-sage-500 block mb-0.5">Carb (g)</span>
+                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.carbs} onChange={(e) => handleFoodEditChange(idx, 'carbs', Number(e.target.value) || 0)} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {editValues.foods.length === 0 && (
+                                                    <div className="text-sm text-sage-500 text-center py-2">料理がありません</div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        <div className="flex gap-2 mt-6 pt-4 border-t border-sage-100">
-                                            <button onClick={() => setIsEditing(false)} disabled={isSaving} className="btn flex-1 btn-outline border-sage-200 text-sage-700 hover:bg-sage-50">
+                                        <div className="grid grid-cols-2 gap-4 bg-sage-50 p-3 rounded-lg mt-2">
+                                            <div className="form-control">
+                                                <label className="label py-1"><span className="label-text font-bold text-sage-700 text-xs">手動合計: カロリー (kcal)</span></label>
+                                                <input type="number" min="0" name="total_calories" value={editValues.total_calories} onChange={handleEditChange} className="input input-bordered input-sm bg-white font-bold" />
+                                            </div>
+                                            <div className="form-control flex flex-col justify-end text-right">
+                                                <div className="text-xs text-sage-500">P: {editValues.total_protein}g / F: {editValues.total_fat}g / C: {editValues.total_carbs}g</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2 mt-4 pt-4 border-t border-sage-100">
+                                            <button onClick={() => setIsEditing(false)} disabled={isSaving || isReanalyzing} className="btn flex-1 btn-outline border-sage-200 text-sage-700 hover:bg-sage-50 disabled:bg-sage-100 disabled:text-sage-400 disabled:border-transparent">
                                                 キャンセル
                                             </button>
-                                            <button onClick={handleSaveEdit} disabled={isSaving} className="btn flex-1 bg-sage-600 text-white hover:bg-sage-700 border-none shadow-sm">
+                                            <button onClick={handleSaveEdit} disabled={isSaving || isReanalyzing} className="btn flex-1 bg-sage-600 text-white hover:bg-sage-700 border-none shadow-sm disabled:bg-sage-200 disabled:text-sage-400">
                                                 {isSaving ? <span className="loading loading-spinner loading-sm"></span> : '保存する'}
                                             </button>
                                         </div>
