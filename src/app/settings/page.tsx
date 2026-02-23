@@ -11,7 +11,7 @@ export default async function SettingsPage() {
     if (session?.user?.id) {
         try {
             const { rows } = await sql`
-                SELECT target_calories, age, gender, height, weight, activity_level 
+                SELECT target_calories, age, gender, height, weight, activity_level, target_weight
                 FROM users 
                 WHERE id = ${session.user.id} 
                 LIMIT 1
