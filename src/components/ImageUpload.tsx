@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 
 interface ImageUploadProps {
   imagePreview: string | null;
@@ -23,6 +23,22 @@ export function ImageUpload({
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+
+  useEffect(() => {
+    if (loading && !isCompressing) {
+      setAnalysisProgress(0);
+      const interval = setInterval(() => {
+        setAnalysisProgress(prev => {
+          if (prev >= 95) return prev;
+          return prev + Math.max(0.2, (100 - prev) / 40);
+        });
+      }, 100);
+      return () => clearInterval(interval);
+    } else {
+      setAnalysisProgress(0);
+    }
+  }, [loading, isCompressing]);
 
   const handleChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,13 +115,10 @@ export function ImageUpload({
                     type="button"
                     onClick={onAnalyze}
                     disabled={loading || isCompressing}
-                    className="btn bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm"
+                    className="btn bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm disabled:bg-sage-200 disabled:text-sage-400"
                   >
                     {isCompressing ? "画像を最適化中…" : loading ? (
-                      <>
-                        <span className="loading loading-spinner loading-sm"></span>
-                        解析中…
-                      </>
+                      <><span className="loading loading-spinner loading-sm"></span>解析中…</>
                     ) : "カロリーを解析"}
                   </button>
                 )}
@@ -116,11 +129,21 @@ export function ImageUpload({
                     if (inputRef.current) inputRef.current.value = "";
                   }}
                   disabled={loading || isCompressing}
-                  className="btn bg-white hover:bg-sage-50 text-sage-700 border-sage-200 shadow-sm"
+                  className="btn bg-white hover:bg-sage-50 text-sage-700 border-sage-200 shadow-sm disabled:bg-sage-100 disabled:text-sage-400 disabled:border-transparent"
                 >
                   別の写真を選ぶ
                 </button>
               </div>
+
+              {loading && !isCompressing && (
+                <div className="w-full mt-2 p-4 bg-sage-50 rounded-xl border border-sage-200 shadow-sm flex flex-col items-center gap-3 text-center animate-fade-in-up">
+                  <div className="flex items-center gap-2 text-sage-800 font-bold">
+                    <span className="animate-pulse">🤖 AIが食品とカロリーを解析中...</span>
+                  </div>
+                  <progress className="progress progress-success w-full lg:w-3/4" value={analysisProgress} max="100"></progress>
+                  <p className="text-xs text-sage-500">※写真の解像度や内容によって、10〜20秒ほどかかる場合があります</p>
+                </div>
+              )}
             </div>
           </div>
         ) : (

@@ -53,7 +53,7 @@ export async function PATCH(
         }
 
         const body = await request.json();
-        const { total_calories, total_protein, total_fat, total_carbs } = body;
+        const { total_calories, total_protein, total_fat, total_carbs, analyzed_data } = body;
 
         // 数値チェック
         if (
@@ -71,7 +71,8 @@ export async function PATCH(
             SET total_calories = ${total_calories},
                 total_protein = ${total_protein},
                 total_fat = ${total_fat},
-                total_carbs = ${total_carbs}
+                total_carbs = ${total_carbs},
+                analyzed_data = ${analyzed_data ? JSON.stringify(analyzed_data) : null}
             WHERE id = ${logId} AND user_id = ${session.user.id}
             RETURNING id;
         `;
