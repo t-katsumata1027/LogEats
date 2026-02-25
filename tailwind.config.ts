@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-noto)", "sans-serif"],
+        sans: ["var(--font-inter)", "var(--font-zen-gothic)", "sans-serif"],
       },
       colors: {
         sage: {

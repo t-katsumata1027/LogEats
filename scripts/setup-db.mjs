@@ -64,7 +64,18 @@ async function setup() {
       );
     `;
 
-    console.log("3つのテーブルが正常に作成・検証されました！");
+    // 4. error_logs (新規: API解析失敗の記録)
+    await sql`
+      CREATE TABLE IF NOT EXISTS error_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        error_message TEXT NOT NULL,
+        context JSONB,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    console.log("すべてのテーブルが正常に作成・検証されました！");
     process.exit(0);
   } catch (e) {
     console.error("テーブルの作成に失敗しました:", e);

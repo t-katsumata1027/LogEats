@@ -5,6 +5,8 @@ import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 interface NutritionResultProps {
   foods: AnalyzedFood[];
   summary: NutritionSummary;
+  isAmbiguous?: boolean;
+  isLoggedIn?: boolean;
 }
 
 function SummaryCard({ summary }: { summary: NutritionSummary }) {
@@ -34,12 +36,24 @@ function SummaryCard({ summary }: { summary: NutritionSummary }) {
   );
 }
 
-export function NutritionResult({ foods, summary }: NutritionResultProps) {
+export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn }: NutritionResultProps) {
   return (
     <section className="mt-8 space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-sage-800">推定結果（概算）</h2>
       </div>
+
+      {isAmbiguous && (
+        <div className="alert bg-orange-50 border border-orange-200 text-orange-800 text-sm shadow-sm flex items-start px-4 py-3 gap-3 rounded-xl mt-3 -mb-2">
+          <span className="text-xl leading-none">⚠️</span>
+          <span className="leading-relaxed">
+            写真が遠い・または複数人の食事が写っている等のため、推定精度が低くなっている可能性があります。
+            {isLoggedIn
+              ? "結果を確認し必要な場合は履歴から調整してください。"
+              : "ログインすると履歴画面から結果を調整することができます。"}
+          </span>
+        </div>
+      )}
 
       <SummaryCard summary={summary} />
 

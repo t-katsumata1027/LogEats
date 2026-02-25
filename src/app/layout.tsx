@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
-import { Noto_Sans_JP } from "next/font/google";
+import { Inter, Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const noto = Noto_Sans_JP({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-noto",
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const zenGothic = Zen_Kaku_Gothic_New({
+  weight: ["300", "400", "500", "700"],
+  subsets: ["latin"],
+  variable: "--font-zen-gothic",
   display: "swap",
 });
 
@@ -28,7 +35,7 @@ export default async function RootLayout({
 
   return (
     <html lang="ja" data-theme="pastel">
-      <body className={`min-h-screen font-sans antialiased bg-cream text-sage-900 flex flex-col ${session ? "pb-20 sm:pb-0" : ""}`}>
+      <body className={`min-h-screen ${inter.variable} ${zenGothic.variable} font-sans antialiased bg-cream text-sage-900 flex flex-col ${session ? "pb-20 sm:pb-0" : ""}`}>
         <div className="flex-1">
           {children}
         </div>
