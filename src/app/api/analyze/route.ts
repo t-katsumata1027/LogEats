@@ -373,6 +373,16 @@ export async function POST(request: NextRequest) {
       } catch (e) {
         console.error("Database Insert Error:", e);
       }
+    } else {
+      // 未ログイン状態の場合は analyze API の利用ログを記録
+      try {
+        await sql`
+          INSERT INTO access_logs (event_type, path)
+          VALUES ('anonymous_upload', '/api/analyze')
+        `;
+      } catch (e) {
+        console.error("Failed to insert anonymous access log:", e);
+      }
     }
 
     return NextResponse.json({ foods, summary, savedLogId, is_ambiguous });

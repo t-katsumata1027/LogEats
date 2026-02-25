@@ -75,6 +75,20 @@ async function setup() {
       );
     `;
 
+    // 5. access_logs (新規: 未ログイン利用やページビューの記録)
+    await sql`DROP TABLE IF EXISTS access_logs`;
+    await sql`
+      CREATE TABLE access_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        event_type VARCHAR(50) NOT NULL,
+        path VARCHAR(255) NOT NULL,
+        duration_ms INTEGER,
+        action_detail VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
     console.log("すべてのテーブルが正常に作成・検証されました！");
     process.exit(0);
   } catch (e) {
