@@ -22,8 +22,20 @@ import { Footer } from "@/components/Footer";
 import { auth } from "@/auth";
 
 export const metadata: Metadata = {
-  title: "Log-Eats | 写真から栄養をチェック",
+  title: {
+    template: "%s | Log-Eats",
+    default: "Log-Eats | 写真から栄養をチェック",
+  },
   description: "食事の写真をアップロードすると、概算のカロリーと栄養素を算出します。",
+  applicationName: "Log-Eats",
+  appleWebApp: {
+    title: "Log-Eats",
+    statusBarStyle: "default",
+    capable: true,
+  },
+  openGraph: {
+    siteName: "Log-Eats",
+  },
 };
 
 export default async function RootLayout({
