@@ -24,6 +24,14 @@ export default async function Home() {
               <>
                 <HeaderNav />
                 <div className="flex items-center gap-2 sm:gap-3">
+                  {session.user.email === process.env.ADMIN_EMAIL && (
+                    <a
+                      href="/admin"
+                      className="btn btn-xs sm:btn-sm btn-outline border-sage-300 text-sage-700 hover:bg-sage-100 hover:border-sage-400 hidden sm:flex items-center gap-1"
+                    >
+                      <span>⚙️</span>管理画面
+                    </a>
+                  )}
                   {session.user.image && (
                     <img src={session.user.image} alt="User avatar" className="w-8 h-8 rounded-full border border-sage-200" />
                   )}

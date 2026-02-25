@@ -47,7 +47,7 @@ export default async function DashboardPage() {
                         </div>
                     </div>
                 ) : (
-                    <Dashboard />
+                    <Dashboard isLoggedIn={!!session} />
                 )}
             </div>
         </main>

@@ -352,10 +352,14 @@ export async function POST(request: NextRequest) {
 
       // 2. Postgres の meal_logs に記録を保存
       try {
+        const mealType = (formData.get("meal_type") as string) || "other";
+        const validMealTypes = ["breakfast", "lunch", "dinner", "snack", "other"];
+        const safeMealType = validMealTypes.includes(mealType) ? mealType : "other";
+
         const { rows } = await sql`
           INSERT INTO meal_logs (
             user_id, image_url, total_calories, total_protein, 
-            total_fat, total_carbs, analyzed_data
+            total_fat, total_carbs, analyzed_data, meal_type
           ) VALUES (
             ${session.user.id}, 
             ${imageUrl}, 
@@ -363,7 +367,8 @@ export async function POST(request: NextRequest) {
             ${summary.totalProtein}, 
             ${summary.totalFat}, 
             ${summary.totalCarbs}, 
-            ${JSON.stringify({ foods })}
+            ${JSON.stringify({ foods })},
+            ${safeMealType}
           )
           RETURNING id;
         `;

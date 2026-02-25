@@ -53,7 +53,7 @@ export async function PATCH(
         }
 
         const body = await request.json();
-        const { total_calories, total_protein, total_fat, total_carbs, analyzed_data } = body;
+        const { total_calories, total_protein, total_fat, total_carbs, analyzed_data, meal_type } = body;
 
         // 数値チェック
         if (
@@ -65,6 +65,10 @@ export async function PATCH(
             return NextResponse.json({ error: "Invalid nutritional values" }, { status: 400 });
         }
 
+        // meal_type バリデーション
+        const validMealTypes = ["breakfast", "lunch", "dinner", "snack", "other"];
+        const safeMealType = meal_type && validMealTypes.includes(meal_type) ? meal_type : null;
+
         // 補正と更新
         const result = await sql`
             UPDATE meal_logs 
@@ -72,7 +76,8 @@ export async function PATCH(
                 total_protein = ${total_protein},
                 total_fat = ${total_fat},
                 total_carbs = ${total_carbs},
-                analyzed_data = ${analyzed_data ? JSON.stringify(analyzed_data) : null}
+                analyzed_data = ${analyzed_data ? JSON.stringify(analyzed_data) : null},
+                meal_type = COALESCE(${safeMealType}, meal_type)
             WHERE id = ${logId} AND user_id = ${session.user.id}
             RETURNING id;
         `;

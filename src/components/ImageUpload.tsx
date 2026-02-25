@@ -2,6 +2,14 @@
 
 import { useRef, useCallback, useState, useEffect } from "react";
 
+const MEAL_TYPE_OPTIONS = [
+  { value: "breakfast", label: "🌅 朝食" },
+  { value: "lunch", label: "☀️ 昼食" },
+  { value: "dinner", label: "🌙 夕食" },
+  { value: "snack", label: "🍪 間食" },
+  { value: "other", label: "📝 その他" },
+];
+
 interface ImageUploadProps {
   imagePreview: string | null;
   onFileSelect: (file: File | null, preview: string | null) => void;
@@ -10,6 +18,9 @@ interface ImageUploadProps {
   loading: boolean;
   hasImage: boolean;
   isAnalyzed?: boolean;
+  isLoggedIn?: boolean;
+  mealType?: string;
+  onMealTypeChange?: (value: string) => void;
 }
 
 export function ImageUpload({
@@ -20,6 +31,9 @@ export function ImageUpload({
   loading,
   hasImage,
   isAnalyzed,
+  isLoggedIn = false,
+  mealType = "other",
+  onMealTypeChange,
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isCompressing, setIsCompressing] = useState(false);
@@ -128,6 +142,34 @@ export function ImageUpload({
                   写真を選択しました。解析を実行してください。
                 </p>
               )}
+
+              {/* 種別セレクター（ログイン中・未解析時のみ） */}
+              {isLoggedIn && !isAnalyzed && (
+                <div className="w-full max-w-xs">
+                  <label className="text-xs font-semibold text-sage-600 mb-1.5 block">
+                    🍽️ 食事の種別
+                  </label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {MEAL_TYPE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => onMealTypeChange?.(opt.value)}
+                        disabled={loading || isCompressing}
+                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-medium border transition-all
+                          ${mealType === opt.value
+                            ? "bg-sage-600 text-white border-sage-600 shadow-sm"
+                            : "bg-white text-sage-600 border-sage-200 hover:bg-sage-50"
+                          }`}
+                      >
+                        <span className="text-base mb-0.5">{opt.label.split(" ")[0]}</span>
+                        <span>{opt.label.split(" ")[1]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center justify-center gap-3">
                 {!isAnalyzed && (
                   <button
