@@ -13,7 +13,7 @@
 
 - Node.js 18+
 - **API キー（どちらか一方）**
-  - **Google Gemini**（推奨・無料枠あり）… [Google AI Studio](https://aistudio.google.com/apikey) で取得
+  - **Google Gemini**… [Google AI Studio](https://aistudio.google.com/apikey) で取得
   - OpenAI … [OpenAI API Keys](https://platform.openai.com/api-keys) で取得（有料クレジット必要）
 
 ## セットアップ
