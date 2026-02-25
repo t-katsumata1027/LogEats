@@ -17,7 +17,11 @@ import { sql } from "@vercel/postgres";
 
 const PROMPT = `この写真に写っている料理・食品をすべて列挙し、JSONで返してください。
 フォーマットは必ず以下のJSONスキーマに従ってください:
-{ "foods": [{ "name": "食品名（日本語）", "amount": "量の目安（例: 1杯、1枚、小皿1つ。不明な場合は省略可）" }] }
+{ 
+  "foods": [{ "name": "食品名（日本語）", "amount": "量の目安（例: 1杯、1枚、小皿1つ。不明な場合は省略可）" }],
+  "is_ambiguous": boolean, // 写真が遠い、複数人の食事が写っている、料理が一部しか写っていないなど不鮮明な場合にtrueにしてください
+  "reason": "is_ambiguousがtrueの場合の理由文（省略可）"
+}
 説明文やマークダウンは不要です。`;
 
 const NUTRITION_PROMPT = (foodName: string, amountStr?: string) =>
@@ -42,18 +46,24 @@ const NUTRITION_PROMPT = (foodName: string, amountStr?: string) =>
 }
 `;
 
-function parseFoodListJson(content: string): { name: string; amount?: string }[] {
+function parseFoodListJson(content: string): { foods: { name: string; amount?: string }[], is_ambiguous?: boolean, reason?: string } {
   const jsonStr = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   try {
     const parsed = JSON.parse(jsonStr);
     const arr = parsed.foods || parsed || [];
-    if (!Array.isArray(arr)) return [];
-    return arr.map((item: any) => {
+    const is_ambiguous = parsed.is_ambiguous || false;
+    const reason = parsed.reason || "";
+
+    if (!Array.isArray(arr)) return { foods: [], is_ambiguous };
+
+    const foods = arr.map((item: any) => {
       if (typeof item === "string") return { name: item };
       return { name: item.name ?? String(item), amount: item.amount };
     });
+
+    return { foods, is_ambiguous, reason };
   } catch {
-    return [];
+    return { foods: [], is_ambiguous: false };
   }
 }
 
@@ -87,7 +97,7 @@ function parseNutritionJson(content: string): FoodMasterRecord | null {
 }
 
 /** OpenAI Vision で写っている料理・食品リストを取得 */
-async function recognizeWithOpenAI(base64Image: string): Promise<{ name: string; amount?: string }[]> {
+async function recognizeWithOpenAI(base64Image: string): Promise<{ foods: { name: string; amount?: string }[], is_ambiguous?: boolean, reason?: string }> {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY ?? "",
     fetch: globalThis.fetch.bind(globalThis) // Edge Runtime の Illegal Invocation 対策
@@ -111,7 +121,7 @@ async function recognizeWithOpenAI(base64Image: string): Promise<{ name: string;
 }
 
 /** Google Gemini で写っている料理・食品リストを取得（無料枠あり / Node.js非依存のためREST APIを使用） */
-async function recognizeWithGemini(base64Image: string): Promise<{ name: string; amount?: string }[]> {
+async function recognizeWithGemini(base64Image: string): Promise<{ foods: { name: string; amount?: string }[], is_ambiguous?: boolean, reason?: string }> {
   const apiKey = process.env.GEMINI_API_KEY ?? "";
   const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
@@ -142,7 +152,9 @@ async function recognizeWithGemini(base64Image: string): Promise<{ name: string;
                 },
                 required: ["name"]
               }
-            }
+            },
+            is_ambiguous: { type: "BOOLEAN" },
+            reason: { type: "STRING" }
           },
           required: ["foods"]
         }
@@ -270,14 +282,14 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await image.arrayBuffer();
     const base64 = arrayBufferToBase64(arrayBuffer);
 
-    const recognized = useGemini
+    const { foods: recognizedRaw, is_ambiguous } = useGemini
       ? await recognizeWithGemini(base64)
       : await recognizeWithOpenAI(base64);
 
     const learned = await loadLearnedFoods();
     const foods: AnalyzedFood[] = [];
 
-    for (const { name, amount } of recognized) {
+    for (const { name, amount } of recognizedRaw) {
       let masterRecord = lookupFoodMasterWithLearned(name, learned);
 
       // DBにない場合はAIでグラム単位の推定を実行
@@ -308,6 +320,13 @@ export async function POST(request: NextRequest) {
         fat: Math.round(initialFat * 10) / 10,
         carbs: Math.round(initialCarbs * 10) / 10,
       });
+    }
+
+    if (foods.length === 0) {
+      return NextResponse.json(
+        { error: "料理や食品を検知できませんでした。より認識しやすい写真を再度お試しください。" },
+        { status: 400 }
+      );
     }
 
     const summary = buildSummary(foods);
@@ -354,10 +373,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ foods, summary, savedLogId });
+    return NextResponse.json({ foods, summary, savedLogId, is_ambiguous });
   } catch (e) {
     console.error("=== API Analysis Error ===", e);
-    const err = e as { status?: number; message?: string; code?: number };
+    const err = e as { status?: number; message?: string; name?: string; stack?: string };
+
+    // エラーログをDBに記録
+    let savedLogId = null;
+    try {
+      const session = await auth();
+      const userId = session?.user?.id || null;
+      let errorMessage = "画像の解析に失敗しました";
+      if (err.message) errorMessage += `: ${err.message}`;
+
+      const context = {
+        name: err.name,
+        stack: err.stack,
+        useGemini: !!process.env.GEMINI_API_KEY
+      };
+
+      await sql`
+        INSERT INTO error_logs (
+          user_id, error_message, context
+        ) VALUES (
+          ${userId ? Number(userId) : null}, 
+          ${errorMessage}, 
+          ${JSON.stringify(context)}
+        )
+      `;
+    } catch (dbError) {
+      console.error("Failed to save error_log to database:", dbError);
+    }
+
     let message = "画像の解析に失敗しました";
     if (err.message) {
       message += `: ${err.message}`;

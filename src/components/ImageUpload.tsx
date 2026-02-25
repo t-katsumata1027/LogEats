@@ -54,13 +54,32 @@ export function ImageUpload({
 
       try {
         setIsCompressing(true);
+
+        let processFile = file;
+
+        // HEICフォーマットの場合はJPEGに変換
+        if (file.type === "image/heic" || file.type === "image/heif" || file.name.toLowerCase().endsWith(".heic")) {
+          const heic2any = (await import("heic2any")).default;
+          const convertedBlob = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.8,
+          });
+
+          // heic2anyはBlobまたはBlob[]を返す場合がある
+          const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+          processFile = new File([finalBlob], file.name.replace(/\.heic$/i, ".jpg"), {
+            type: "image/jpeg",
+          });
+        }
+
         const { default: imageCompression } = await import("browser-image-compression");
         const options = {
           maxSizeMB: 1,
           maxWidthOrHeight: 1024,
           useWebWorker: true,
         };
-        const compressedFile = await imageCompression(file, options);
+        const compressedFile = await imageCompression(processFile, options);
 
         const reader = new FileReader();
         reader.onload = () => onFileSelect(compressedFile, reader.result as string);
@@ -156,11 +175,31 @@ export function ImageUpload({
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               aria-label="食事の写真を選択"
             />
-            <div className="p-10 text-center pointer-events-none">
+            <div className="p-8 pb-10 text-center pointer-events-none">
               <p className="text-sage-600 font-medium">
-                {isCompressing ? "画像の最適化中..." : "クリックして食事の写真を選択"}
+                {isCompressing ? "画像を変換・最適化中..." : "クリックして食事の写真を選択"}
               </p>
-              <p className="text-sage-500 text-sm mt-1">JPG / PNG など</p>
+              <p className="text-sage-500 text-sm mt-1 mb-6">JPG / PNG / HEIC など</p>
+
+              <div className="text-xs text-sage-600 text-left bg-sage-50/80 p-4 rounded-xl border border-sage-200 shadow-sm mx-auto max-w-sm">
+                <p className="font-semibold mb-2 text-sage-700 flex items-center gap-1">
+                  <span className="text-base">📸</span> 認識しやすい写真のコツ
+                </p>
+                <ul className="space-y-1.5 ml-1">
+                  <li className="flex gap-2 leading-relaxed">
+                    <span className="text-sage-400 mt-0.5">・</span>
+                    <span>一人分の食事が枠内に収まっている</span>
+                  </li>
+                  <li className="flex gap-2 leading-relaxed">
+                    <span className="text-sage-400 mt-0.5">・</span>
+                    <span>他の無関係な物（本や物など）が写っていない</span>
+                  </li>
+                  <li className="flex gap-2 leading-relaxed">
+                    <span className="text-sage-400 mt-0.5">・</span>
+                    <span>明るい場所で、料理全体がはっきりと見える</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </>
         )}

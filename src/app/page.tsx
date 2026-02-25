@@ -57,7 +57,7 @@ export default async function Home() {
 
             {/* Try it out Section */}
             <div className="relative z-10 mb-16">
-              <AnalyzerClient />
+              <AnalyzerClient isLoggedIn={!!session} />
             </div>
 
             {/* Features Section */}
@@ -101,7 +101,7 @@ export default async function Home() {
             </div>
           </>
         ) : (
-          <AnalyzerClient />
+          <AnalyzerClient isLoggedIn={!!session} />
         )}
       </div>
     </main>

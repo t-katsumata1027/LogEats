@@ -6,7 +6,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { NutritionResult } from "@/components/NutritionResult";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 
-export function AnalyzerClient() {
+export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -15,6 +15,7 @@ export function AnalyzerClient() {
         foods: AnalyzedFood[];
         summary: NutritionSummary;
         savedLogId?: number;
+        isAmbiguous?: boolean;
     } | null>(null);
 
     const handleFileSelect = useCallback((file: File | null, preview: string | null) => {
@@ -42,7 +43,8 @@ export function AnalyzerClient() {
             setResult({
                 foods: data.foods,
                 summary: data.summary,
-                savedLogId: data.savedLogId
+                savedLogId: data.savedLogId,
+                isAmbiguous: data.is_ambiguous
             });
         } catch (e) {
             setError(e instanceof Error ? e.message : "エラーが発生しました");
@@ -83,6 +85,8 @@ export function AnalyzerClient() {
                 <NutritionResult
                     foods={result.foods}
                     summary={result.summary}
+                    isAmbiguous={result.isAmbiguous}
+                    isLoggedIn={isLoggedIn}
                 />
             )}
 

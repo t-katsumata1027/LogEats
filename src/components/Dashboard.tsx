@@ -494,7 +494,7 @@ export function Dashboard() {
 
             {/* ----- 詳細・編集モーダル ----- */}
             <dialog id="meal_detail_modal" className="modal modal-bottom sm:modal-middle">
-                <div className="modal-box bg-white p-0 overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="modal-box bg-white p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90vh]">
                     {selectedLog && (
                         <>
                             {/* ヘッダー画像部分 */}
@@ -506,32 +506,35 @@ export function Dashboard() {
                                         <span className="text-4xl text-sage-400">🍽️</span>
                                     </div>
                                 )}
-                                <div className="absolute top-3 right-3 flex gap-2">
-                                    {!isEditing && (
-                                        <>
-                                            <button onClick={() => setIsEditing(true)} className="btn btn-sm btn-circle btn-ghost bg-white/80 backdrop-blur" title="数値を編集">
-                                                ✏️
-                                            </button>
-                                            <button onClick={() => handleDelete(selectedLog.id)} disabled={isSaving} className="btn btn-sm btn-circle btn-ghost bg-white/80 backdrop-blur text-red-500 hover:bg-red-50 hover:text-red-600" title="この記録を削除">
-                                                🗑️
-                                            </button>
-                                        </>
-                                    )}
-                                    <button onClick={closeModal} className="btn btn-sm btn-circle btn-ghost bg-white/80 backdrop-blur">
-                                        ✕
-                                    </button>
-                                </div>
+
                             </div>
 
                             {/* コンテンツ部分 */}
                             <div className="p-5 overflow-y-auto">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className="inline-flex items-center text-xs font-semibold px-2 py-1 rounded-full bg-sage-100 text-sage-800">
-                                        🕒 {new Date(selectedLog.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    <span className="text-xs text-sage-500">
-                                        {new Date(selectedLog.logged_at).toLocaleDateString()}
-                                    </span>
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <span className="inline-flex items-center text-xs font-semibold px-2 py-1 rounded-full bg-sage-100 text-sage-800">
+                                            🕒 {new Date(selectedLog.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                        <span className="text-xs text-sage-500">
+                                            {new Date(selectedLog.logged_at).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {!isEditing && (
+                                            <>
+                                                <button onClick={() => setIsEditing(true)} className="btn btn-sm btn-circle btn-ghost bg-sage-50 text-sage-700 hover:bg-sage-100" title="数値を編集">
+                                                    ✏️
+                                                </button>
+                                                <button onClick={() => handleDelete(selectedLog.id)} disabled={isSaving} className="btn btn-sm btn-circle btn-ghost bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600" title="この記録を削除">
+                                                    🗑️
+                                                </button>
+                                            </>
+                                        )}
+                                        <button type="button" onClick={closeModal} className="btn btn-sm btn-circle btn-ghost bg-sage-50 text-sage-700 hover:bg-sage-100">
+                                            ✕
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {!isEditing ? (
