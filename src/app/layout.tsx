@@ -20,6 +20,7 @@ const zenGothic = Zen_Kaku_Gothic_New({
 import { BottomNav } from "@/components/BottomNav";
 import { Footer } from "@/components/Footer";
 import { auth } from "@/auth";
+import { EventTracker } from "@/components/EventTracker";
 
 export const metadata: Metadata = {
   title: {
@@ -48,6 +49,7 @@ export default async function RootLayout({
   return (
     <html lang="ja" data-theme="pastel">
       <body className={`min-h-screen ${inter.variable} ${zenGothic.variable} font-sans antialiased bg-cream text-sage-900 flex flex-col ${session ? "pb-20 sm:pb-0" : ""}`}>
+        <EventTracker />
         <div className="flex-1">
           {children}
         </div>
