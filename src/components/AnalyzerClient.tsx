@@ -11,6 +11,7 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [mealType, setMealType] = useState("other");
     const [result, setResult] = useState<{
         foods: AnalyzedFood[];
         summary: NutritionSummary;
@@ -33,6 +34,9 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
         try {
             const formData = new FormData();
             formData.append("image", imageFile);
+            if (isLoggedIn) {
+                formData.append("meal_type", mealType);
+            }
             const res = await fetch("/api/analyze", {
                 method: "POST",
                 body: formData,
@@ -51,7 +55,7 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
         } finally {
             setLoading(false);
         }
-    }, [imageFile]);
+    }, [imageFile, isLoggedIn, mealType]);
 
     const handleReset = useCallback(() => {
         setImageFile(null);
@@ -70,6 +74,9 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 loading={loading}
                 hasImage={!!imageFile}
                 isAnalyzed={!!result}
+                isLoggedIn={isLoggedIn}
+                mealType={mealType}
+                onMealTypeChange={setMealType}
             />
 
             {error && (

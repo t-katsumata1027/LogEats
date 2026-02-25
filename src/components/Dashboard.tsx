@@ -17,7 +17,23 @@ type MealLog = {
     logged_at: string;
 };
 
-export function Dashboard() {
+const MEAL_TYPE_OPTIONS = [
+    { value: "breakfast", label: "🌅 朝食" },
+    { value: "lunch", label: "☀️ 昼食" },
+    { value: "dinner", label: "🌙 夕食" },
+    { value: "snack", label: "🍪 間食" },
+    { value: "other", label: "📝 その他" },
+];
+
+const MEAL_TYPE_LABELS: Record<string, string> = {
+    breakfast: "🌅 朝食",
+    lunch: "☀️ 昼食",
+    dinner: "🌙 夕食",
+    snack: "🍪 間食",
+    other: "📝 その他",
+};
+
+export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     const [logs, setLogs] = useState<MealLog[]>([]);
     const [targetCalories, setTargetCalories] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
@@ -33,6 +49,7 @@ export function Dashboard() {
         total_protein: 0,
         total_fat: 0,
         total_carbs: 0,
+        meal_type: "other",
         foods: [] as AnalyzedFood[]
     });
     const [isSaving, setIsSaving] = useState(false);
@@ -66,6 +83,7 @@ export function Dashboard() {
             total_protein: Math.round(log.total_protein),
             total_fat: Math.round(log.total_fat),
             total_carbs: Math.round(log.total_carbs),
+            meal_type: log.meal_type || "other",
             foods: log.analyzed_data?.foods ? JSON.parse(JSON.stringify(log.analyzed_data.foods)) : []
         });
         setReanalyzePrompt("");
@@ -98,7 +116,11 @@ export function Dashboard() {
         if (!selectedLog) return;
         setIsSaving(true);
         try {
-            const payload = { ...editValues, analyzed_data: { foods: editValues.foods } };
+            const payload = {
+                ...editValues,
+                analyzed_data: { foods: editValues.foods },
+                meal_type: editValues.meal_type,
+            };
             const res = await fetch(`/api/logs/${selectedLog.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -113,6 +135,7 @@ export function Dashboard() {
                 total_protein: editValues.total_protein,
                 total_fat: editValues.total_fat,
                 total_carbs: editValues.total_carbs,
+                meal_type: editValues.meal_type,
                 analyzed_data: { foods: editValues.foods }
             } : l));
             fetchData(); // 目標カロリー等の再取得
@@ -158,6 +181,7 @@ export function Dashboard() {
                 total_protein: Math.round(newValues.total_protein),
                 total_fat: Math.round(newValues.total_fat),
                 total_carbs: Math.round(newValues.total_carbs),
+                meal_type: selectedLog?.meal_type || "other",
                 foods: newValues.analyzed_data?.foods ? JSON.parse(JSON.stringify(newValues.analyzed_data.foods)) : []
             });
 
@@ -519,6 +543,9 @@ export function Dashboard() {
                                         <span className="text-xs text-sage-500">
                                             {new Date(selectedLog.logged_at).toLocaleDateString()}
                                         </span>
+                                        <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-sage-50 border border-sage-200 text-sage-700">
+                                            {MEAL_TYPE_LABELS[selectedLog.meal_type] || "📝 その他"}
+                                        </span>
                                     </div>
                                     <div className="flex gap-2">
                                         {!isEditing && (
@@ -621,6 +648,19 @@ export function Dashboard() {
                                         {/* 個別料理の編集エリア */}
                                         <div>
                                             <h4 className="text-sm font-bold text-sage-800 border-b border-sage-100 pb-2 mb-3 mt-4">構成要素の手動調整</h4>
+                                            <div className="form-control mb-3">
+                                                <label className="label py-1"><span className="label-text font-bold text-sage-700 text-xs">食事タイプ</span></label>
+                                                <select
+                                                    name="meal_type"
+                                                    value={editValues.meal_type}
+                                                    onChange={(e) => setEditValues(prev => ({ ...prev, meal_type: e.target.value }))}
+                                                    className="select select-bordered select-sm bg-white"
+                                                >
+                                                    {Object.entries(MEAL_TYPE_LABELS).map(([key, value]) => (
+                                                        <option key={key} value={key}>{value}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                             <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
                                                 {editValues.foods.map((food, idx) => (
                                                     <div key={idx} className="bg-white border border-sage-200 rounded-lg p-2.5 flex flex-col gap-2 relative">
