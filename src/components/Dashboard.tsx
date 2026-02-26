@@ -59,6 +59,16 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     const [isReanalyzing, setIsReanalyzing] = useState(false);
     const [reanalyzeProgress, setReanalyzeProgress] = useState(0);
 
+    // --- 手動追記モーダル用のState ---
+    const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+    const [manualText, setManualText] = useState("");
+    const [manualMealType, setManualMealType] = useState("other");
+    const [manualDate, setManualDate] = useState("");
+    const [manualTime, setManualTime] = useState("");
+    const [isManualSubmitting, setIsManualSubmitting] = useState(false);
+    const [manualProgress, setManualProgress] = useState(0);
+    const [manualError, setManualError] = useState<string | null>(null);
+
     // AI再計算のプログレスバーアニメーション
     useEffect(() => {
         if (isReanalyzing) {
@@ -192,6 +202,84 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             alert(err instanceof Error ? err.message : "エラーが発生しました");
         } finally {
             setIsReanalyzing(false);
+        }
+    };
+
+    // 手動追記モーダルを開く（選択中の日付をデフォルトに設定）
+    const openManualModal = () => {
+        const now = new Date();
+        // selectedDate が今日の場合は現在時刻、それ以外はその日の12:00をデフォルトに
+        const base = new Date(selectedDate);
+        const isToday = base.toLocaleDateString() === now.toLocaleDateString();
+        const defaultTime = isToday
+            ? `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+            : '12:00';
+        const y = base.getFullYear();
+        const m = String(base.getMonth() + 1).padStart(2, '0');
+        const d = String(base.getDate()).padStart(2, '0');
+        setManualDate(`${y}-${m}-${d}`);
+        setManualTime(defaultTime);
+        setManualMealType('other');
+        setManualText('');
+        setManualError(null);
+        setIsManualModalOpen(true);
+    };
+
+    const closeManualModal = () => {
+        setIsManualModalOpen(false);
+    };
+
+    const handleManualLog = async () => {
+        if (!manualText.trim()) {
+            setManualError('食事内容を入力してください。');
+            return;
+        }
+        setIsManualSubmitting(true);
+        setManualError(null);
+        setManualProgress(0);
+
+        // プログレスアニメーション
+        const progressInterval = setInterval(() => {
+            setManualProgress(prev => {
+                if (prev >= 95) return prev;
+                return prev + Math.max(0.5, (100 - prev) / 20);
+            });
+        }, 150);
+
+        try {
+            const loggedAt = manualDate && manualTime
+                ? new Date(`${manualDate}T${manualTime}:00`).toISOString()
+                : undefined;
+
+            const res = await fetch('/api/logs/manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: manualText.trim(),
+                    meal_type: manualMealType,
+                    logged_at: loggedAt,
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || '保存に失敗しました');
+            }
+
+            setManualProgress(100);
+            await fetchData(); // ログ一覧を再取得
+
+            // 追記日付に自動でカレンダーを移動
+            if (manualDate) {
+                setSelectedDate(new Date(`${manualDate}T${manualTime || '12:00'}:00`));
+            }
+
+            closeManualModal();
+        } catch (err) {
+            setManualError(err instanceof Error ? err.message : 'エラーが発生しました');
+        } finally {
+            clearInterval(progressInterval);
+            setIsManualSubmitting(false);
         }
     };
 
@@ -466,7 +554,15 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     <div>
                         <h3 className="text-lg font-medium text-sage-800 mb-4 flex items-center justify-between">
                             <span>{filterDateStr === new Date().toLocaleDateString() ? "今日の食事" : "この日の食事"}</span>
-                            <span className="text-sm font-normal text-sage-500">{filteredLogs.length}件の記録</span>
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm font-normal text-sage-500">{filteredLogs.length}件の記録</span>
+                                <button
+                                    onClick={openManualModal}
+                                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-sage-600 text-white hover:bg-sage-700 transition-colors shadow-sm"
+                                >
+                                    <span>✏️</span> テキストで追記
+                                </button>
+                            </div>
                         </h3>
 
                         {filteredLogs.length === 0 ? (
@@ -513,6 +609,122 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                         )}
                     </div>
 
+                </div>
+            )}
+
+            {/* ----- 手動追記モーダル ----- */}
+            {isManualModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) closeManualModal(); }}
+                >
+                    <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90dvh] overflow-y-auto">
+                        {/* ヘッダー */}
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-base font-bold text-sage-900">✏️ テキストで食事を追記</h3>
+                            <button
+                                onClick={closeManualModal}
+                                className="btn btn-sm btn-circle btn-ghost bg-sage-50 text-sage-700 hover:bg-sage-100"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-sage-500 -mt-2">
+                            写真を撮り忘れた食事を、テキストで入力してAIが栄養素を自動推定します。
+                        </p>
+
+                        {/* 日時 */}
+                        <div className="flex gap-3">
+                            <div className="flex-1 form-control">
+                                <label className="label py-1"><span className="label-text font-bold text-sage-700 text-xs">📅 日付</span></label>
+                                <input
+                                    type="date"
+                                    className="input input-bordered input-sm bg-white"
+                                    value={manualDate}
+                                    onChange={e => setManualDate(e.target.value)}
+                                    disabled={isManualSubmitting}
+                                />
+                            </div>
+                            <div className="flex-1 form-control">
+                                <label className="label py-1"><span className="label-text font-bold text-sage-700 text-xs">🕒 時刻</span></label>
+                                <input
+                                    type="time"
+                                    className="input input-bordered input-sm bg-white"
+                                    value={manualTime}
+                                    onChange={e => setManualTime(e.target.value)}
+                                    disabled={isManualSubmitting}
+                                />
+                            </div>
+                        </div>
+
+                        {/* 食事タイプ */}
+                        <div className="form-control">
+                            <label className="label py-1"><span className="label-text font-bold text-sage-700 text-xs">🍽️ 食事タイプ（AIが推定・変更可）</span></label>
+                            <select
+                                className="select select-bordered select-sm bg-white"
+                                value={manualMealType}
+                                onChange={e => setManualMealType(e.target.value)}
+                                disabled={isManualSubmitting}
+                            >
+                                {MEAL_TYPE_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* テキスト入力 */}
+                        <div className="form-control">
+                            <label className="label py-1"><span className="label-text font-bold text-sage-700 text-xs">🗒️ 食事内容（自然言語で入力）</span></label>
+                            <textarea
+                                className="textarea textarea-bordered bg-white text-sm leading-relaxed"
+                                rows={4}
+                                placeholder="例: ざるそば1人前と唐揚げ3個、ご飯半分くらい食べた"
+                                value={manualText}
+                                onChange={e => setManualText(e.target.value)}
+                                disabled={isManualSubmitting}
+                                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleManualLog(); }}
+                            />
+                            <label className="label py-0.5"><span className="label-text-alt text-sage-400">Cmd+Enter で送信</span></label>
+                        </div>
+
+                        {/* エラー表示 */}
+                        {manualError && (
+                            <div className="alert alert-error text-sm py-2">{manualError}</div>
+                        )}
+
+                        {/* プログレスバー */}
+                        {isManualSubmitting && (
+                            <div className="p-3 bg-sage-50 rounded-lg border border-sage-200 flex flex-col items-center gap-2">
+                                <div className="flex items-center gap-2 text-sage-800 font-bold text-sm animate-pulse">
+                                    🤖 AIが食事内容を解析・栄養素を推定中...
+                                </div>
+                                <progress className="progress progress-success w-full" value={manualProgress} max="100" />
+                                <p className="text-[10px] text-sage-500">※ 料理の数によって10〜20秒ほどかかる場合があります</p>
+                            </div>
+                        )}
+
+                        {/* ボタン */}
+                        <div className="flex gap-3 pt-1">
+                            <button
+                                onClick={closeManualModal}
+                                disabled={isManualSubmitting}
+                                className="btn flex-1 btn-outline border-sage-200 text-sage-700 hover:bg-sage-50"
+                            >
+                                キャンセル
+                            </button>
+                            <button
+                                onClick={handleManualLog}
+                                disabled={isManualSubmitting || !manualText.trim()}
+                                className="btn flex-1 bg-sage-600 text-white hover:bg-sage-700 border-none shadow-sm disabled:bg-sage-200 disabled:text-sage-400"
+                            >
+                                {isManualSubmitting
+                                    ? <span className="loading loading-spinner loading-sm" />
+                                    : '🤖 AIで解析して追加'
+                                }
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
