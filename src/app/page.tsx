@@ -1,8 +1,8 @@
 import { SignIn, SignOut } from "@/components/AuthButtons";
 import { auth } from "@/auth";
 import { AnalyzerClient } from "@/components/AnalyzerClient";
-
 import { HeaderNav } from "@/components/HeaderNav";
+import { AddToHomeScreen, AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScreen";
 
 export default async function Home() {
   const session = await auth();
@@ -20,6 +20,7 @@ export default async function Home() {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <AddToHomeScreen />
             {session?.user ? (
               <>
                 <HeaderNav />
@@ -61,6 +62,8 @@ export default async function Home() {
                 <SignIn />
                 <span className="text-xs text-sage-400 font-medium">※無料で始められます</span>
               </div>
+              {/* ① ホーム画面追加カード（スマホ向け） */}
+              <AddToHomeInlineCard />
             </div>
 
             {/* Try it out Section */}
@@ -112,6 +115,8 @@ export default async function Home() {
           <AnalyzerClient isLoggedIn={!!session} />
         )}
       </div>
+      {/* ② ホーム画面追加 固定バナー（スマホ向け） */}
+      <AddToHomeBanner />
     </main>
   );
 }
