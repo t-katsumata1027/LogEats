@@ -20,7 +20,7 @@ export default async function Home() {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            <AddToHomeScreen />
+            {!session?.user && <AddToHomeScreen />}
             {session?.user ? (
               <>
                 <HeaderNav />
