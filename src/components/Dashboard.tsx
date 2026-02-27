@@ -550,19 +550,63 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                         </div>
                     </div>
 
+                    {/* ----- テキスト入力セクション ----- */}
+                    <div className="rounded-2xl bg-gradient-to-br from-sage-50 to-white border border-sage-200 shadow-sm p-5">
+                        <div className="flex items-start gap-3 mb-3">
+                            <span className="text-2xl shrink-0">✏️</span>
+                            <div>
+                                <p className="text-sm font-bold text-sage-800 leading-tight">
+                                    写真がなくても登録可能！
+                                </p>
+                                <p className="text-xs text-sage-500 mt-0.5">
+                                    何を食べたか教えてください
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <textarea
+                                className="textarea textarea-bordered bg-white text-sm leading-relaxed w-full resize-none"
+                                rows={3}
+                                placeholder="例: ざるそば1人前と唐揚げ3個、ご飯半分くらい食べた"
+                                value={manualText}
+                                onChange={e => setManualText(e.target.value)}
+                                disabled={isManualSubmitting}
+                                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleManualLog(); }}
+                            />
+
+                            {manualError && (
+                                <div className="alert alert-error text-xs py-2">{manualError}</div>
+                            )}
+
+                            {isManualSubmitting && (
+                                <div className="p-3 bg-sage-50 rounded-lg border border-sage-200 flex flex-col items-center gap-2">
+                                    <div className="flex items-center gap-2 text-sage-800 font-bold text-sm animate-pulse">
+                                        🤖 AIが食事内容を解析・栄養素を推定中...
+                                    </div>
+                                    <progress className="progress progress-success w-full" value={manualProgress} max="100" />
+                                    <p className="text-[10px] text-sage-500">※ 料理の数によって10〜20秒ほどかかる場合があります</p>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleManualLog}
+                                disabled={isManualSubmitting || !manualText.trim()}
+                                className="btn w-full bg-sage-600 text-white hover:bg-sage-700 border-none shadow-sm disabled:bg-sage-200 disabled:text-sage-400 text-sm font-bold"
+                            >
+                                {isManualSubmitting
+                                    ? <span className="loading loading-spinner loading-sm" />
+                                    : '🤖 AIで解析して登録する'
+                                }
+                            </button>
+                        </div>
+                    </div>
+
                     {/* ----- タイムライン ----- */}
                     <div>
                         <h3 className="text-lg font-medium text-sage-800 mb-4 flex items-center justify-between">
                             <span>{filterDateStr === new Date().toLocaleDateString() ? "今日の食事" : "この日の食事"}</span>
-                            <div className="flex items-center gap-3">
-                                <span className="text-sm font-normal text-sage-500">{filteredLogs.length}件の記録</span>
-                                <button
-                                    onClick={openManualModal}
-                                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-sage-600 text-white hover:bg-sage-700 transition-colors shadow-sm"
-                                >
-                                    <span>✏️</span> テキストで追記
-                                </button>
-                            </div>
+                            <span className="text-sm font-normal text-sage-500">{filteredLogs.length}件の記録</span>
                         </h3>
 
                         {filteredLogs.length === 0 ? (
