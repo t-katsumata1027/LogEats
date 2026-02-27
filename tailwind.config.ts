@@ -27,6 +27,29 @@ const config: Config = {
         cream: "#faf8f5",
         olive: "#6b7c5c",
       },
+      keyframes: {
+        fadeOut: {
+          "0%, 50%": { opacity: "1" },
+          "100%": { opacity: "0", visibility: "hidden" },
+        },
+        fillBar: {
+          "0%": { width: "0%" },
+          "100%": { width: "100%" },
+        },
+        "fade-in-up": {
+          "0%": {
+            opacity: "0",
+            transform: "translateY(20px)",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translateY(0)",
+          },
+        },
+      },
+      animation: {
+        "fade-in-up": "fade-in-up 0.5s ease-out forwards",
+      },
     },
   },
   plugins: [require("daisyui")],
