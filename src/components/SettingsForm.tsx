@@ -27,7 +27,10 @@ export function SettingsForm({ initialData }: { initialData: any }) {
 
     // カロリー + PFC 自動計算（ハリス・ベネディクト方程式 ＋ ダイエット補正）
     const calculateRecommended = () => {
-        if (!age || !gender || !height || !weight || !activityLevel) return;
+        if (!age || !gender || !height || !weight || !activityLevel) {
+            setMessage({ type: "error", text: "年齢、性別、身長、体重、普段の活動量をすべて入力してください" });
+            return;
+        }
 
         let bmr = 0;
         if (gender === "male") {
@@ -173,7 +176,6 @@ export function SettingsForm({ initialData }: { initialData: any }) {
                     <button
                         type="button"
                         onClick={calculateRecommended}
-                        disabled={!age || !gender || !height || !weight || !activityLevel}
                         className="btn btn-sm btn-outline border-sage-300 text-sage-700 hover:bg-sage-50 hover:border-sage-400"
                     >
                         ✨ 身体情報から自動計算
