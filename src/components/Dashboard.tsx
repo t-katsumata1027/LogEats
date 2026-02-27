@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
+import { WeeklyChart } from "@/components/WeeklyChart";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 
 type MealLog = {
@@ -36,6 +37,9 @@ const MEAL_TYPE_LABELS: Record<string, string> = {
 export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     const [logs, setLogs] = useState<MealLog[]>([]);
     const [targetCalories, setTargetCalories] = useState<number | null>(null);
+    const [targetProtein, setTargetProtein] = useState<number | null>(null);
+    const [targetFat, setTargetFat] = useState<number | null>(null);
+    const [targetCarbs, setTargetCarbs] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -343,6 +347,9 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             const data = await res.json();
             setLogs(data.logs || []);
             setTargetCalories(data.targetCalories ?? null);
+            setTargetProtein(data.targetProtein ?? null);
+            setTargetFat(data.targetFat ?? null);
+            setTargetCarbs(data.targetCarbs ?? null);
         } catch (err) {
             setError(err instanceof Error ? err.message : "読込エラー");
         } finally {
@@ -377,6 +384,16 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
     // カレンダーで「記録が存在する日」をハイライトするための配列
     const loggedDates = logs.map(log => new Date(log.logged_at));
+
+    // 目標カロリーを下回った日（食べすぎなかった日）に⭐を表示
+    const dailyCalMap: Record<string, number> = {};
+    logs.forEach(log => {
+        const key = new Date(log.logged_at).toLocaleDateString();
+        dailyCalMap[key] = (dailyCalMap[key] || 0) + Number(log.total_calories);
+    });
+    const starDates = Object.entries(dailyCalMap)
+        .filter(([, cal]) => targetCalories && targetCalories > 0 && cal > 0 && cal <= targetCalories)
+        .map(([d]) => { const dt = new Date(d); dt.setHours(0, 0, 0, 0); return dt; });
 
     // 週表示用の日付生成 (選択された日を含む週の月曜日〜日曜日)
     const getWeekDays = (date: Date) => {
@@ -424,6 +441,17 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 <span>📊</span> あなたの食事記録
             </h2>
 
+            {/* ----- 週次グラフ ----- */}
+            <div className="mb-8">
+                <WeeklyChart
+                    logs={logs}
+                    targetCalories={targetCalories}
+                    targetProtein={targetProtein}
+                    targetFat={targetFat}
+                    targetCarbs={targetCarbs}
+                />
+            </div>
+
             {/* ----- カレンダー ----- */}
             <div className="mb-8 card bg-base-100 border border-sage-100 shadow-sm p-4">
                 <div className="flex justify-between items-center mb-4 px-2">
@@ -454,19 +482,23 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                             const isSelected = date.toLocaleDateString() === selectedDate.toLocaleDateString();
                             const isToday = date.toLocaleDateString() === new Date().toLocaleDateString();
                             const hasLog = loggedDates.some(ld => ld.toLocaleDateString() === date.toLocaleDateString());
+                            const isStar = starDates.some(sd => sd.toLocaleDateString() === date.toLocaleDateString());
                             const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
 
                             return (
                                 <button
                                     key={i}
                                     onClick={() => setSelectedDate(date)}
-                                    className={`flex flex-col items-center justify-center p-2 rounded-xl w-10 sm:w-12 transition-colors ${isSelected
-                                        ? 'bg-sage-600 text-white shadow-md'
-                                        : isToday
-                                            ? 'bg-sage-100 text-sage-900 border border-sage-200'
-                                            : 'text-sage-600 hover:bg-sage-50'
+                                    className={`relative flex flex-col items-center justify-center p-2 rounded-xl w-10 sm:w-12 transition-colors ${isSelected
+                                            ? 'bg-sage-600 text-white shadow-md'
+                                            : isToday
+                                                ? 'bg-sage-100 text-sage-900 border border-sage-200'
+                                                : 'text-sage-600 hover:bg-sage-50'
                                         }`}
                                 >
+                                    {isStar && (
+                                        <span className="absolute -top-1 -right-1 text-[10px] leading-none pointer-events-none">⭐</span>
+                                    )}
                                     <span className={`text-[10px] font-medium mb-1 ${isSelected ? 'text-sage-100' : 'text-sage-400'}`}>
                                         {dayNames[i]}
                                     </span>
@@ -484,9 +516,10 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                             mode="single"
                             selected={selectedDate}
                             onSelect={(date) => date && setSelectedDate(date)}
-                            modifiers={{ hasLog: loggedDates }}
+                            modifiers={{ hasLog: loggedDates, starDay: starDates }}
                             modifiersClassNames={{
-                                hasLog: "font-bold text-sage-800 underline decoration-sage-400 decoration-2 underline-offset-4"
+                                hasLog: "font-bold text-sage-800 underline decoration-sage-400 decoration-2 underline-offset-4",
+                                starDay: "!relative"
                             }}
                             className="text-sage-800 p-2 mx-auto"
                             style={{
