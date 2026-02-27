@@ -274,6 +274,7 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 setSelectedDate(new Date(`${manualDate}T${manualTime || '12:00'}:00`));
             }
 
+            setManualText(''); // テキストボックスをクリア
             closeManualModal();
         } catch (err) {
             setManualError(err instanceof Error ? err.message : 'エラーが発生しました');
