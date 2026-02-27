@@ -102,10 +102,25 @@ export function WeeklyChart({ logs, targetCalories, targetProtein, targetFat, ta
                         />
                         <Tooltip
                             contentStyle={{ borderRadius: 12, border: "1px solid #d4dbd0", fontSize: 12 }}
-                            formatter={(value: any, name: string | undefined) => {
+                            formatter={(value: any, name: string | undefined, _item: any, _index: any, payload: any) => {
                                 if (value === null || value === undefined) return ["—", name ?? ""];
-                                const unit = name === "カロリー" ? "kcal" : "g";
-                                return [`${value}${unit}`, name ?? ""];
+                                const isCalories = name === "カロリー";
+                                const unit = isCalories ? "kcal" : "g";
+
+                                // 目標値を取得して達成率を計算
+                                const targetMap: Record<string, number | null> = {
+                                    "カロリー": targetCalories,
+                                    "タンパク質": targetProtein,
+                                    "脂質": targetFat,
+                                    "炭水化物": targetCarbs,
+                                };
+                                const target = targetMap[name ?? ""];
+                                const pct = target && target > 0 ? Math.round((value / target) * 100) : null;
+                                const label = pct !== null
+                                    ? `${value}${unit} (目標${target}${unit} / ${pct}%${value > target! ? " ⚠️" : pct >= 100 ? " ✅" : ""})`
+                                    : `${value}${unit}`;
+
+                                return [label, name ?? ""];
                             }}
                         />
                         <Legend

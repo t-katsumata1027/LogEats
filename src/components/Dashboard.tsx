@@ -490,10 +490,10 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                     key={i}
                                     onClick={() => setSelectedDate(date)}
                                     className={`relative flex flex-col items-center justify-center p-2 rounded-xl w-10 sm:w-12 transition-colors ${isSelected
-                                            ? 'bg-sage-600 text-white shadow-md'
-                                            : isToday
-                                                ? 'bg-sage-100 text-sage-900 border border-sage-200'
-                                                : 'text-sage-600 hover:bg-sage-50'
+                                        ? 'bg-sage-600 text-white shadow-md'
+                                        : isToday
+                                            ? 'bg-sage-100 text-sage-900 border border-sage-200'
+                                            : 'text-sage-600 hover:bg-sage-50'
                                         }`}
                                 >
                                     {isStar && (
@@ -539,7 +539,8 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             ) : (
                 <div className="space-y-8">
                     {/* ----- サマリーパネル ----- */}
-                    <div className="card bg-base-100 shadow-sm border border-sage-100 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="card bg-base-100 shadow-sm border border-sage-100 p-6 space-y-5">
+                        {/* カロリー行 */}
                         <div>
                             <p className="text-sage-600 text-sm font-medium mb-1">
                                 {filterDateStr === new Date().toLocaleDateString() ? "今日" : selectedDate.toLocaleDateString([], { month: "short", day: "numeric" })}摂取したカロリー
@@ -548,39 +549,77 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                 <span className={`text-4xl font-bold tracking-tight ${targetCalories && selectedTotal > targetCalories ? 'text-red-500' : 'text-sage-900'}`}>
                                     {Math.round(selectedTotal).toLocaleString()}
                                 </span>
-                                <span className="text-sage-500 font-medium">kcal</span>
+                                <span className="text-sage-500 font-medium">
+                                    kcal{targetCalories && targetCalories > 0 ? ` / ${targetCalories}` : ""}
+                                </span>
+                                {targetCalories && targetCalories > 0 && selectedTotal > 0 && (
+                                    <span className={`ml-auto text-sm font-bold px-2 py-0.5 rounded-full ${selectedTotal <= targetCalories
+                                            ? 'bg-emerald-50 text-emerald-600'
+                                            : 'bg-red-50 text-red-500'
+                                        }`}>
+                                        {selectedTotal <= targetCalories
+                                            ? `残り ${Math.round(targetCalories - selectedTotal)} kcal ⭐`
+                                            : `${Math.round(selectedTotal - targetCalories)} kcal オーバー`
+                                        }
+                                    </span>
+                                )}
                             </div>
-                            {targetDisplay}
-
                             {targetCalories && targetCalories > 0 && (
-                                <div className="w-full bg-sage-100 rounded-full h-2.5 mt-3 overflow-hidden">
+                                <div className="w-full bg-sage-100 rounded-full h-2 mt-2 overflow-hidden">
                                     <div
                                         className={`h-full rounded-full transition-all duration-500 ${selectedTotal > targetCalories ? 'bg-red-400' : 'bg-sage-400'}`}
-                                        style={{ width: `${progressPct}%` }}
-                                    ></div>
+                                        style={{ width: `${Math.min((selectedTotal / targetCalories) * 100, 100)}%` }}
+                                    />
                                 </div>
                             )}
                         </div>
 
-                        <div className="w-full md:w-auto flex gap-4 text-sm">
-                            <div className="bg-sage-50 px-4 py-3 rounded-box flex-1 md:flex-none text-center">
-                                <div className="text-sage-500 mb-0.5 font-medium">Protein</div>
-                                <div className="font-bold text-sage-800">
-                                    {Math.round(selectedProtein)}g
-                                </div>
-                            </div>
-                            <div className="bg-sage-50 px-4 py-3 rounded-box flex-1 md:flex-none text-center">
-                                <div className="text-sage-500 mb-0.5 font-medium">Fat</div>
-                                <div className="font-bold text-sage-800">
-                                    {Math.round(selectedFat)}g
-                                </div>
-                            </div>
-                            <div className="bg-sage-50 px-4 py-3 rounded-box flex-1 md:flex-none text-center">
-                                <div className="text-sage-500 mb-0.5 font-medium">Carbs</div>
-                                <div className="font-bold text-sage-800">
-                                    {Math.round(selectedCarbs)}g
-                                </div>
-                            </div>
+                        {/* PFC プログレスカード */}
+                        <div className="grid grid-cols-3 gap-3">
+                            {[
+                                { label: "タンパク質", emoji: "💪", value: selectedProtein, target: targetProtein, color: "blue" },
+                                { label: "脂質", emoji: "🥑", value: selectedFat, target: targetFat, color: "purple" },
+                                { label: "炭水化物", emoji: "🌾", value: selectedCarbs, target: targetCarbs, color: "green" },
+                            ].map(({ label, emoji, value, target, color }) => {
+                                const rounded = Math.round(value);
+                                const pct = target && target > 0 ? Math.min((value / target) * 100, 100) : 0;
+                                const over = target && value > target;
+                                const achieved = target && target > 0 && value >= target;
+                                const barColor = over
+                                    ? "bg-red-400"
+                                    : color === "blue" ? "bg-blue-400"
+                                        : color === "purple" ? "bg-purple-400"
+                                            : "bg-emerald-400";
+
+                                return (
+                                    <div key={label} className={`rounded-xl p-3 border text-center transition-colors ${achieved ? 'bg-emerald-50 border-emerald-200' :
+                                            over ? 'bg-red-50 border-red-200' :
+                                                'bg-sage-50 border-sage-100'
+                                        }`}>
+                                        <div className="text-[11px] text-sage-500 font-medium mb-0.5">{emoji} {label}</div>
+                                        <div className={`text-lg font-bold leading-tight ${over ? 'text-red-500' : 'text-sage-900'}`}>
+                                            {rounded}<span className="text-xs font-normal text-sage-400">g</span>
+                                        </div>
+                                        {target && target > 0 ? (
+                                            <>
+                                                <div className="w-full bg-white rounded-full h-1.5 mt-1.5 overflow-hidden">
+                                                    <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
+                                                </div>
+                                                <div className={`text-[10px] mt-1 font-medium ${over ? 'text-red-400' : achieved ? 'text-emerald-500' : 'text-sage-400'}`}>
+                                                    {over
+                                                        ? `+${Math.round(value - target)}g オーバー`
+                                                        : achieved
+                                                            ? '✅ 達成！'
+                                                            : `/ ${target}g (${Math.round(pct)}%)`
+                                                    }
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-[10px] mt-1 text-sage-300">目標未設定</div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
