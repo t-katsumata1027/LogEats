@@ -205,6 +205,107 @@ export default async function Home() {
                   </div>
                 </div>
               </div>
+
+              {/* Feature 3: Chat Correction Demo */}
+              <div className="flex flex-col md:flex-row items-center gap-10">
+                <div className="flex-1 space-y-4">
+                  <div className="text-4xl">🪄</div>
+                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">AIとチャット感覚で柔軟に補正</h4>
+                  <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
+                    「ご飯は半分しか食べていない」「ドレッシングを変えた」など、あとから自然言語で修正指示を出すことで、より正確な記録が可能です。
+                  </p>
+                </div>
+                <div className="flex-1 w-full max-w-sm shrink-0 border border-sage-200 bg-sage-50 rounded-2xl shadow-xl overflow-hidden p-4 space-y-3">
+                  {/* Chat Mockup */}
+                  <div className="chat chat-end animate-[fade-in-up_2s_ease-out_infinite_alternate]">
+                    <div className="chat-bubble bg-sage-600 text-white text-sm shadow-md">ご飯は半分残しました</div>
+                  </div>
+                  <div className="chat chat-start">
+                    <div className="chat-bubble bg-white text-sage-800 border border-sage-200 text-sm shadow-sm flex flex-col gap-1">
+                      <div className="font-bold">再計算しました！</div>
+                      <div className="text-xs text-sage-500 line-through">カロリー: 500 kcal</div>
+                      <div className="text-emerald-600 font-bold text-[13px]">👉 カロリー: 380 kcal (-120kcal)</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 4: Goals Auto Calc Demo */}
+              <div className="flex flex-col md:flex-row-reverse items-center gap-10">
+                <div className="flex-1 space-y-4">
+                  <div className="text-4xl">⚙️</div>
+                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">身体情報から目標を自動計算</h4>
+                  <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
+                    年齢、身長、体重、普段の活動量を入力するだけで、あなたに最適な1日の目標カロリーとPFC（タンパク質・脂質・炭水化物）バランスをAIが自動計算します。
+                  </p>
+                </div>
+                <div className="flex-1 w-full max-w-sm shrink-0 border border-sage-200 bg-white rounded-2xl shadow-xl overflow-hidden p-5">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-sage-100 pb-2">
+                      <span className="font-bold text-sage-800 text-sm">現在の体重</span>
+                      <span className="text-sm font-medium">65.0 kg</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-sage-100 pb-2">
+                      <span className="font-bold text-sage-800 text-sm">目標体重</span>
+                      <span className="text-sm font-medium">60.0 kg</span>
+                    </div>
+                    <button className="btn btn-sm btn-block bg-sage-100 border-sage-300 text-sage-700 font-bold cursor-default hover:bg-sage-100">
+                      ✨ 身体情報から自動計算
+                    </button>
+                    <div className="bg-sage-50 p-4 rounded-xl border border-sage-100 text-center animate-[fade-in-up_2s_ease-out_infinite_alternate]">
+                      <div className="text-xs text-sage-600 font-bold mb-1">🔥 目標摂取カロリー</div>
+                      <div className="text-2xl font-extrabold text-sage-800">1,850 <span className="text-xs font-normal">kcal</span></div>
+                      <div className="flex justify-center gap-3 mt-3 text-xs font-bold bg-white p-2 rounded-lg border border-sage-100 shadow-sm">
+                        <span className="text-blue-600">P: 96g</span>
+                        <span className="text-purple-600">F: 51g</span>
+                        <span className="text-green-600">C: 250g</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 5: History Graph Demo */}
+              <div className="flex flex-col md:flex-row items-center gap-10">
+                <div className="flex-1 space-y-4">
+                  <div className="text-4xl">📈</div>
+                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">過去の履歴をグラフで振り返り</h4>
+                  <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
+                    過去1週間の摂取カロリーと各栄養素の推移を折れ線グラフで表示。目標ライン（点線）との差分がひと目でわかり、振り返りが簡単になります。
+                  </p>
+                </div>
+                <div className="flex-1 w-full max-w-sm shrink-0 border border-sage-200 bg-white rounded-2xl shadow-xl overflow-hidden p-5">
+                  <h5 className="font-bold text-sage-800 text-sm mb-4">直近7日間の推移</h5>
+                  {/* Fake Graph */}
+                  <div className="relative h-32 w-full border-b border-l border-sage-200">
+                    <div className="absolute top-[40%] left-0 w-full border-t-2 border-dashed border-sage-300 z-0"></div>
+                    <span className="absolute top-[35%] -mt-4 left-1 text-[9px] text-sage-500 font-bold">目標値</span>
+                    {/* SVG Line mimicking a chart */}
+                    <svg className="absolute inset-0 h-full w-full z-10" preserveAspectRatio="none" viewBox="0 0 100 100">
+                      <polyline
+                        points="0,80 16,30 33,60 50,20 66,70 83,40 100,50"
+                        fill="none"
+                        stroke="#f97316"
+                        strokeWidth="2.5"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                        className="animate-[pulse_2s_ease-in-out_infinite]"
+                      />
+                      {/* Plot Points */}
+                      <circle cx="0" cy="80" r="2" fill="#ea580c" />
+                      <circle cx="16" cy="30" r="2" fill="#ea580c" />
+                      <circle cx="33" cy="60" r="2" fill="#ea580c" />
+                      <circle cx="50" cy="20" r="2" fill="#ea580c" />
+                      <circle cx="66" cy="70" r="2" fill="#ea580c" />
+                      <circle cx="83" cy="40" r="2" fill="#ea580c" />
+                      <circle cx="100" cy="50" r="2" fill="#ea580c" />
+                    </svg>
+                  </div>
+                  <div className="flex justify-between mt-2 text-[10px] font-medium text-sage-400">
+                    <span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>今日</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="text-center py-12 px-6 border border-sage-200 bg-sage-50/50 rounded-3xl mb-8">
