@@ -17,6 +17,7 @@ export function SettingsForm({ initialData }: { initialData: any }) {
     const [targetProtein, setTargetProtein] = useState<number | "">(initialData?.target_protein || "");
     const [targetFat, setTargetFat] = useState<number | "">(initialData?.target_fat || "");
     const [targetCarbs, setTargetCarbs] = useState<number | "">(initialData?.target_carbs || "");
+    const [tolerancePct, setTolerancePct] = useState<number>(initialData?.tolerance_pct ?? 10);
     const [calculationDetails, setCalculationDetails] = useState<string | null>(null);
 
     // UI制御State
@@ -79,6 +80,7 @@ export function SettingsForm({ initialData }: { initialData: any }) {
                 target_protein: targetProtein === "" ? null : Number(targetProtein),
                 target_fat: targetFat === "" ? null : Number(targetFat),
                 target_carbs: targetCarbs === "" ? null : Number(targetCarbs),
+                tolerance_pct: tolerancePct,
                 age: age === "" ? null : Number(age),
                 gender: gender === "" ? null : gender,
                 height: height === "" ? null : Number(height),
@@ -246,9 +248,31 @@ export function SettingsForm({ initialData }: { initialData: any }) {
                     </div>
                 </div>
 
-                <p className="text-xs text-sage-500 mt-3">
-                    ※ ダッシュボードの残りカロリー表示・週次グラフのリファレンスラインに使用されます。
-                </p>
+                {/* 許容幅スライダー */}
+                <div className="form-control sm:col-span-2 mt-2 p-4 bg-sage-50/60 rounded-xl border border-sage-100">
+                    <label className="label pb-1">
+                        <span className="label-text font-semibold text-sage-700">🎯 目標達成の許容幅</span>
+                        <span className="label-text-alt text-sage-500 text-xs">目標値の ±{tolerancePct}% 以内を「達成」とみなします</span>
+                    </label>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-sage-400 w-8 shrink-0">±5%</span>
+                        <input
+                            type="range" min="5" max="30" step="5"
+                            value={tolerancePct}
+                            onChange={e => setTolerancePct(Number(e.target.value))}
+                            className="range range-xs range-success flex-1"
+                        />
+                        <span className="text-xs text-sage-400 w-10 shrink-0">±30%</span>
+                    </div>
+                    <div className="flex justify-between mt-1 px-8">
+                        {[5, 10, 15, 20, 25, 30].map(v => (
+                            <span key={v} className={`text-[10px] ${v === tolerancePct ? 'text-sage-700 font-bold' : 'text-sage-300'}`}>±{v}%</span>
+                        ))}
+                    </div>
+                    <p className="text-[11px] text-sage-400 mt-2 leading-relaxed">
+                        例：タンパク質目標120g・許容幅±{tolerancePct}% → {Math.round(120 * (1 - tolerancePct / 100))}g〜{Math.round(120 * (1 + tolerancePct / 100))}g が達成範囲
+                    </p>
+                </div>
             </div>
 
             <div className="pt-6 border-t border-sage-100 flex justify-end">

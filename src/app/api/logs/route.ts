@@ -38,15 +38,16 @@ export async function GET(request: NextRequest) {
 
     // ユーザーの目標カロリー・PFCも取得しておく
     const { rows: userRows } = await sql`
-      SELECT target_calories, target_protein, target_fat, target_carbs
+      SELECT target_calories, target_protein, target_fat, target_carbs, tolerance_pct
       FROM users WHERE id = ${session.user.id} LIMIT 1
     `;
     const targetCalories = userRows.length > 0 ? userRows[0].target_calories : null;
     const targetProtein = userRows.length > 0 ? userRows[0].target_protein : null;
     const targetFat = userRows.length > 0 ? userRows[0].target_fat : null;
     const targetCarbs = userRows.length > 0 ? userRows[0].target_carbs : null;
+    const tolerancePct = userRows.length > 0 ? (userRows[0].tolerance_pct ?? 10) : 10;
 
-    return NextResponse.json({ logs: logsRows, targetCalories, targetProtein, targetFat, targetCarbs });
+    return NextResponse.json({ logs: logsRows, targetCalories, targetProtein, targetFat, targetCarbs, tolerancePct });
   } catch (error) {
     console.error("Failed to fetch meal logs:", error);
     return NextResponse.json({ error: "Failed to fetch meal logs" }, { status: 500 });
