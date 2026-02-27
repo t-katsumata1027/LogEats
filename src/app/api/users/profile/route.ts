@@ -11,7 +11,7 @@ export async function PATCH(request: Request) {
 
         const body = await request.json();
         const { target_calories, age, gender, height, weight, activity_level, target_weight,
-            target_protein, target_fat, target_carbs } = body;
+            target_protein, target_fat, target_carbs, tolerance_pct } = body;
 
         // 値の検証 (nullやundefined、負の数などを防ぐ)
         if (target_calories === undefined || target_calories === null) {
@@ -36,9 +36,10 @@ export async function PATCH(request: Request) {
                 activity_level = ${activity_level},
                 target_protein = ${target_protein ?? null},
                 target_fat = ${target_fat ?? null},
-                target_carbs = ${target_carbs ?? null}
+                target_carbs = ${target_carbs ?? null},
+                tolerance_pct = ${tolerance_pct ?? 10}
             WHERE id = ${session.user.id}
-            RETURNING id, target_calories, target_protein, target_fat, target_carbs,
+            RETURNING id, target_calories, target_protein, target_fat, target_carbs, tolerance_pct,
                       age, gender, height, weight, target_weight, activity_level;
         `;
 

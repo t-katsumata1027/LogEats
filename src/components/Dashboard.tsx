@@ -40,6 +40,7 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     const [targetProtein, setTargetProtein] = useState<number | null>(null);
     const [targetFat, setTargetFat] = useState<number | null>(null);
     const [targetCarbs, setTargetCarbs] = useState<number | null>(null);
+    const [tolerancePct, setTolerancePct] = useState<number>(10);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -350,6 +351,7 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             setTargetProtein(data.targetProtein ?? null);
             setTargetFat(data.targetFat ?? null);
             setTargetCarbs(data.targetCarbs ?? null);
+            setTolerancePct(data.tolerancePct ?? 10);
         } catch (err) {
             setError(err instanceof Error ? err.message : "読込エラー");
         } finally {
@@ -385,14 +387,19 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     // カレンダーで「記録が存在する日」をハイライトするための配列
     const loggedDates = logs.map(log => new Date(log.logged_at));
 
-    // 目標カロリーを下回った日（食べすぎなかった日）に⭐を表示
+    // 目標カロリーを許容幅内で達成した日（食べすぎず、かつある程度食べた日）に⭐を表示
     const dailyCalMap: Record<string, number> = {};
     logs.forEach(log => {
         const key = new Date(log.logged_at).toLocaleDateString();
         dailyCalMap[key] = (dailyCalMap[key] || 0) + Number(log.total_calories);
     });
+    const tol = tolerancePct / 100;
     const starDates = Object.entries(dailyCalMap)
-        .filter(([, cal]) => targetCalories && targetCalories > 0 && cal > 0 && cal <= targetCalories)
+        .filter(([, cal]) => {
+            if (!targetCalories || targetCalories <= 0 || cal <= 0) return false;
+            const lower = targetCalories * (1 - tol);
+            return cal >= lower && cal <= targetCalories;
+        })
         .map(([d]) => { const dt = new Date(d); dt.setHours(0, 0, 0, 0); return dt; });
 
     // 週表示用の日付生成 (選択された日を含む週の月曜日〜日曜日)
@@ -545,32 +552,46 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                             <p className="text-sage-600 text-sm font-medium mb-1">
                                 {filterDateStr === new Date().toLocaleDateString() ? "今日" : selectedDate.toLocaleDateString([], { month: "short", day: "numeric" })}摂取したカロリー
                             </p>
-                            <div className="flex items-baseline gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-4xl font-bold tracking-tight ${targetCalories && selectedTotal > targetCalories ? 'text-red-500' : 'text-sage-900'}`}>
                                     {Math.round(selectedTotal).toLocaleString()}
                                 </span>
                                 <span className="text-sage-500 font-medium">
                                     kcal{targetCalories && targetCalories > 0 ? ` / ${targetCalories}` : ""}
                                 </span>
-                                {targetCalories && targetCalories > 0 && selectedTotal > 0 && (
-                                    <span className={`ml-auto text-sm font-bold px-2 py-0.5 rounded-full ${selectedTotal <= targetCalories
-                                            ? 'bg-emerald-50 text-emerald-600'
-                                            : 'bg-red-50 text-red-500'
-                                        }`}>
-                                        {selectedTotal <= targetCalories
-                                            ? `残り ${Math.round(targetCalories - selectedTotal)} kcal ⭐`
-                                            : `${Math.round(selectedTotal - targetCalories)} kcal オーバー`
-                                        }
-                                    </span>
-                                )}
+                                {targetCalories && targetCalories > 0 && selectedTotal > 0 && (() => {
+                                    const lower = targetCalories * (1 - tol);
+                                    const isAchieved = selectedTotal >= lower && selectedTotal <= targetCalories;
+                                    const isOver = selectedTotal > targetCalories;
+                                    if (isAchieved) return (
+                                        <span className="ml-auto text-sm font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
+                                            ⭐ 達成！（±{tolerancePct}%範囲内）
+                                        </span>
+                                    );
+                                    if (isOver) return (
+                                        <span className="ml-auto text-sm font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-500">
+                                            {Math.round(selectedTotal - targetCalories)} kcal オーバー
+                                        </span>
+                                    );
+                                    return (
+                                        <span className="ml-auto text-sm font-bold px-2 py-0.5 rounded-full bg-sage-50 text-sage-600">
+                                            残り {Math.round(targetCalories - selectedTotal)} kcal
+                                        </span>
+                                    );
+                                })()}
                             </div>
                             {targetCalories && targetCalories > 0 && (
                                 <div className="w-full bg-sage-100 rounded-full h-2 mt-2 overflow-hidden">
                                     <div
-                                        className={`h-full rounded-full transition-all duration-500 ${selectedTotal > targetCalories ? 'bg-red-400' : 'bg-sage-400'}`}
+                                        className={`h-full rounded-full transition-all duration-500 ${selectedTotal > targetCalories ? 'bg-red-400' : selectedTotal >= targetCalories * (1 - tol) ? 'bg-emerald-400' : 'bg-sage-400'}`}
                                         style={{ width: `${Math.min((selectedTotal / targetCalories) * 100, 100)}%` }}
                                     />
                                 </div>
+                            )}
+                            {targetCalories && targetCalories > 0 && (
+                                <p className="text-[10px] text-sage-400 mt-1">
+                                    達成範囲: {Math.round(targetCalories * (1 - tol))}〜{targetCalories} kcal（±{tolerancePct}%）
+                                </p>
                             )}
                         </div>
 
@@ -583,16 +604,20 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                             ].map(({ label, emoji, value, target, color }) => {
                                 const rounded = Math.round(value);
                                 const pct = target && target > 0 ? Math.min((value / target) * 100, 100) : 0;
-                                const over = target && value > target;
-                                const achieved = target && target > 0 && value >= target;
+                                const lower = target ? target * (1 - tol) : 0;
+                                const upper = target ? target * (1 + tol) : 0;
+                                const isAchieved = target && target > 0 && value >= lower && value <= upper;
+                                const over = target && value > upper;
                                 const barColor = over
                                     ? "bg-red-400"
-                                    : color === "blue" ? "bg-blue-400"
-                                        : color === "purple" ? "bg-purple-400"
-                                            : "bg-emerald-400";
+                                    : isAchieved
+                                        ? "bg-emerald-400"
+                                        : color === "blue" ? "bg-blue-400"
+                                            : color === "purple" ? "bg-purple-400"
+                                                : "bg-green-400";
 
                                 return (
-                                    <div key={label} className={`rounded-xl p-3 border text-center transition-colors ${achieved ? 'bg-emerald-50 border-emerald-200' :
+                                    <div key={label} className={`rounded-xl p-3 border text-center transition-colors ${isAchieved ? 'bg-emerald-50 border-emerald-200' :
                                             over ? 'bg-red-50 border-red-200' :
                                                 'bg-sage-50 border-sage-100'
                                         }`}>
@@ -605,13 +630,16 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                                 <div className="w-full bg-white rounded-full h-1.5 mt-1.5 overflow-hidden">
                                                     <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
                                                 </div>
-                                                <div className={`text-[10px] mt-1 font-medium ${over ? 'text-red-400' : achieved ? 'text-emerald-500' : 'text-sage-400'}`}>
+                                                <div className={`text-[10px] mt-1 font-medium ${over ? 'text-red-400' : isAchieved ? 'text-emerald-500' : 'text-sage-400'}`}>
                                                     {over
-                                                        ? `+${Math.round(value - target)}g オーバー`
-                                                        : achieved
+                                                        ? `+${Math.round(value - upper)}g オーバー`
+                                                        : isAchieved
                                                             ? '✅ 達成！'
                                                             : `/ ${target}g (${Math.round(pct)}%)`
                                                     }
+                                                </div>
+                                                <div className="text-[9px] text-sage-300 mt-0.5">
+                                                    {Math.round(lower)}〜{Math.round(upper)}g
                                                 </div>
                                             </>
                                         ) : (
