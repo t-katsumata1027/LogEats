@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
     return (
         <footer className="bg-sage-900 text-sage-200 py-8 text-center text-sm border-t border-sage-800">
@@ -11,8 +13,8 @@ export function Footer() {
                     <span>AI-powered meal tracking</span>
                 </p>
                 <div className="flex justify-center gap-4 text-xs opacity-60">
-                    <a href="#" className="hover:text-white transition-colors">利用規約</a>
-                    <a href="#" className="hover:text-white transition-colors">プライバシーポリシー</a>
+                    <Link href="/terms" className="hover:text-white transition-colors">利用規約</Link>
+                    <Link href="/privacy" className="hover:text-white transition-colors">プライバシーポリシー</Link>
                     <a href="#" className="hover:text-white transition-colors">お問い合わせ</a>
                 </div>
                 <div className="mt-8 text-[10px] opacity-40">

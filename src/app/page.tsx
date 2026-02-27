@@ -3,18 +3,63 @@ import { auth } from "@/auth";
 import { AnalyzerClient } from "@/components/AnalyzerClient";
 import { HeaderNav } from "@/components/HeaderNav";
 import { AddToHomeScreen, AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScreen";
+import { WeeklyChartDemo } from "@/components/WeeklyChartDemo";
 
 export default async function Home() {
   const session = await auth();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Log-Eats",
+        "url": process.env.NEXT_PUBLIC_APP_URL || "https://log-eats.vercel.app",
+        "description": "食事の写真をアップロードするかテキストを入力するだけで、AIが瞬時に概算のカロリーとPFCを自動計算・記録するAI食事管理アプリです。",
+        "applicationCategory": "HealthApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "JPY"
+        }
+      },
+      {
+        "@type": "HowTo",
+        "name": "Log-Eatsを使った食事記録の方法",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "食事の画像をアップロード",
+            "text": "スマートフォンで撮影した食事の写真をアップロード、またはテキストを入力します。"
+          },
+          {
+            "@type": "HowToStep",
+            "name": "AIが解析",
+            "text": "AIが解析し、カロリーとPFCバランスを自動計算します。"
+          },
+          {
+            "@type": "HowToStep",
+            "name": "日々の進捗を確認",
+            "text": "ダッシュボードに保存され、日々の栄養バランスをグラフで確認できます。"
+          }
+        ]
+      }
+    ]
+  };
+
   return (
     <main className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <header className="border-b border-sage-200/60 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h1 className="text-xl font-semibold text-sage-800 tracking-tight">
+            <div className="text-xl font-semibold text-sage-800 tracking-tight">
               Log-Eats
-            </h1>
+            </div>
             <p className="text-xs sm:text-sm text-sage-600 mt-1 leading-snug">
               写真をアップロードすると、概算のカロリーと栄養素を表示します
             </p>
@@ -51,9 +96,9 @@ export default async function Home() {
           <>
             {/* Hero Section */}
             <div className="text-center py-6 sm:py-10 mb-8 animate-fade-in-up">
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-sage-900 tracking-tight mb-4">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-sage-900 tracking-tight mb-4">
                 毎日の食事を、<br className="sm:hidden" /><span className="text-sage-600">AIで賢く記録</span>
-              </h2>
+              </h1>
               <p className="text-sage-600 text-sm sm:text-base max-w-lg mx-auto mb-8 leading-relaxed">
                 写真を撮るだけで、カロリーとPFC（タンパク質・脂質・炭水化物）を自動計算。<br className="hidden sm:block" />
                 まずはログインなしで、下から画像解析を試してみてください👇
@@ -275,35 +320,9 @@ export default async function Home() {
                   </p>
                 </div>
                 <div className="flex-1 w-full max-w-sm shrink-0 border border-sage-200 bg-white rounded-2xl shadow-xl overflow-hidden p-5">
-                  <h5 className="font-bold text-sage-800 text-sm mb-4">直近7日間の推移</h5>
+                  <h5 className="font-bold text-sage-800 text-sm mb-1">直近7日間の推移</h5>
                   {/* Fake Graph */}
-                  <div className="relative h-32 w-full border-b border-l border-sage-200">
-                    <div className="absolute top-[40%] left-0 w-full border-t-2 border-dashed border-sage-300 z-0"></div>
-                    <span className="absolute top-[35%] -mt-4 left-1 text-[9px] text-sage-500 font-bold">目標値</span>
-                    {/* SVG Line mimicking a chart */}
-                    <svg className="absolute inset-0 h-full w-full z-10" preserveAspectRatio="none" viewBox="0 0 100 100">
-                      <polyline
-                        points="0,80 16,30 33,60 50,20 66,70 83,40 100,50"
-                        fill="none"
-                        stroke="#f97316"
-                        strokeWidth="2.5"
-                        strokeLinejoin="round"
-                        strokeLinecap="round"
-                        className="animate-[pulse_2s_ease-in-out_infinite]"
-                      />
-                      {/* Plot Points */}
-                      <circle cx="0" cy="80" r="2" fill="#ea580c" />
-                      <circle cx="16" cy="30" r="2" fill="#ea580c" />
-                      <circle cx="33" cy="60" r="2" fill="#ea580c" />
-                      <circle cx="50" cy="20" r="2" fill="#ea580c" />
-                      <circle cx="66" cy="70" r="2" fill="#ea580c" />
-                      <circle cx="83" cy="40" r="2" fill="#ea580c" />
-                      <circle cx="100" cy="50" r="2" fill="#ea580c" />
-                    </svg>
-                  </div>
-                  <div className="flex justify-between mt-2 text-[10px] font-medium text-sage-400">
-                    <span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>今日</span>
-                  </div>
+                  <WeeklyChartDemo />
                 </div>
               </div>
             </div>
