@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 import { WeeklyChart } from "@/components/WeeklyChart";
+import { AdBanner } from "@/components/AdBanner";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 
 type MealLog = {
@@ -372,9 +373,7 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
         );
     }
 
-    if (logs.length === 0 && !error) {
-        return null;
-    }
+    // 空の場合でもカレンダーや手動入力フォームは表示させたいので、nullは返さない
 
     // 選択された日付のログだけを抽出
     const filterDateStr = selectedDate.toLocaleDateString();
@@ -701,6 +700,11 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                 }
                             </button>
                         </div>
+                    </div>
+
+                    {/* ----- 広告枠（履歴の間） ----- */}
+                    <div className="py-2">
+                        <AdBanner adSlot="dashboard-timeline-slot" className="min-h-[100px]" />
                     </div>
 
                     {/* ----- タイムライン ----- */}

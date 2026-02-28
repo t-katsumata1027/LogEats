@@ -5,6 +5,7 @@ import { HeaderNav } from "@/components/HeaderNav";
 import { AddToHomeScreen, AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScreen";
 import { WeeklyChartDemo } from "@/components/WeeklyChartDemo";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
+import { AdBanner } from "@/components/AdBanner";
 
 export default async function Home() {
   const { userId } = await auth();
@@ -117,7 +118,14 @@ export default async function Home() {
             </div>
 
             {/* Release Notes */}
-            <ReleaseNotes />
+            <div className="mb-8">
+              <ReleaseNotes />
+            </div>
+
+            {/* Ad Banner - Top Page 1 */}
+            <div className="mb-20">
+              <AdBanner adSlot="top-page-slot-1" className="min-h-[100px]" />
+            </div>
 
             {/* Features (Mockup Animations) */}
             <div className="mb-20 space-y-20">
@@ -298,6 +306,9 @@ export default async function Home() {
         <SignedIn>
           <div className="flex flex-col gap-12">
             <AnalyzerClient isLoggedIn={true} />
+            <div className="w-full mb-4">
+              <AdBanner adSlot="dashboard-top-slot" className="min-h-[100px]" />
+            </div>
             <ReleaseNotes />
           </div>
         </SignedIn>

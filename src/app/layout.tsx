@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Inter, Zen_Kaku_Gothic_New } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
 import { jaJP } from '@clerk/localizations';
@@ -82,6 +83,16 @@ export default async function RootLayout({
   return (
     <ClerkProvider localization={jaJP}>
       <html lang="ja" data-theme="pastel">
+        <head>
+          {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID && (
+            <Script
+              async
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
+              crossOrigin="anonymous"
+              strategy="lazyOnload"
+            />
+          )}
+        </head>
         <body className={`min-h-screen ${inter.variable} ${zenGothic.variable} font-sans antialiased bg-cream text-sage-900 flex flex-col ${userId ? "pb-20 sm:pb-0" : ""}`}>
           <EventTracker />
           <div className="flex-1">
