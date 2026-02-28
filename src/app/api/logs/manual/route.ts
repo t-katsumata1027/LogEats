@@ -202,9 +202,7 @@ async function estimateNutritionWithAI(
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const isGuest = !session?.user?.id;
 
     const body = await request.json();
     const { text, meal_type: bodyMealType, logged_at } = body;
@@ -279,46 +277,59 @@ export async function POST(request: NextRequest) {
       bodyMealType && validMealTypes.includes(bodyMealType)
         ? bodyMealType
         : validMealTypes.includes(aiMealType)
-        ? aiMealType
-        : "other";
+          ? aiMealType
+          : "other";
 
-    // Step 3: DB に保存
-    const { rows } = loggedAtValue
-      ? await sql`
-          INSERT INTO meal_logs (
-            user_id, image_url, total_calories, total_protein,
-            total_fat, total_carbs, analyzed_data, meal_type, logged_at
-          ) VALUES (
-            ${session.user.id},
-            NULL,
-            ${totalCalories},
-            ${totalProtein},
-            ${totalFat},
-            ${totalCarbs},
-            ${JSON.stringify({ foods })},
-            ${safeMealType},
-            ${loggedAtValue}
-          )
-          RETURNING id;
-        `
-      : await sql`
-          INSERT INTO meal_logs (
-            user_id, image_url, total_calories, total_protein,
-            total_fat, total_carbs, analyzed_data, meal_type
-          ) VALUES (
-            ${session.user.id},
-            NULL,
-            ${totalCalories},
-            ${totalProtein},
-            ${totalFat},
-            ${totalCarbs},
-            ${JSON.stringify({ foods })},
-            ${safeMealType}
-          )
-          RETURNING id;
+    // Step 3: DB に保存 (ログイン時のみ)
+    let savedLogId = null;
+    if (!isGuest) {
+      const { rows } = loggedAtValue
+        ? await sql`
+            INSERT INTO meal_logs (
+              user_id, image_url, total_calories, total_protein,
+              total_fat, total_carbs, analyzed_data, meal_type, logged_at
+            ) VALUES (
+              ${session.user?.id},
+              NULL,
+              ${totalCalories},
+              ${totalProtein},
+              ${totalFat},
+              ${totalCarbs},
+              ${JSON.stringify({ foods })},
+              ${safeMealType},
+              ${loggedAtValue}
+            )
+            RETURNING id;
+          `
+        : await sql`
+            INSERT INTO meal_logs (
+              user_id, image_url, total_calories, total_protein,
+              total_fat, total_carbs, analyzed_data, meal_type
+            ) VALUES (
+              ${session.user?.id},
+              NULL,
+              ${totalCalories},
+              ${totalProtein},
+              ${totalFat},
+              ${totalCarbs},
+              ${JSON.stringify({ foods })},
+              ${safeMealType}
+            )
+            RETURNING id;
+          `;
+
+      savedLogId = rows[0]?.id ?? null;
+    } else {
+      // 未ログイン状態の場合はアクセスログのみ記録
+      try {
+        await sql`
+          INSERT INTO access_logs (event_type, path)
+          VALUES ('anonymous_text_log', '/api/logs/manual')
         `;
-
-    const savedLogId = rows[0]?.id ?? null;
+      } catch (e) {
+        console.error("Failed to insert anonymous access log:", e);
+      }
+    }
 
     return NextResponse.json({
       success: true,

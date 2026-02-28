@@ -618,8 +618,8 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
                                 return (
                                     <div key={label} className={`rounded-xl p-3 border text-center transition-colors ${isAchieved ? 'bg-emerald-50 border-emerald-200' :
-                                            over ? 'bg-red-50 border-red-200' :
-                                                'bg-sage-50 border-sage-100'
+                                        over ? 'bg-red-50 border-red-200' :
+                                            'bg-sage-50 border-sage-100'
                                         }`}>
                                         <div className="text-[11px] text-sage-500 font-medium mb-0.5">{emoji} {label}</div>
                                         <div className={`text-lg font-bold leading-tight ${over ? 'text-red-500' : 'text-sage-900'}`}>
@@ -926,17 +926,36 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                     <div className="space-y-6">
                                         <div>
                                             <h4 className="text-sm font-bold text-sage-800 border-b border-sage-100 pb-2 mb-3">AIの検出結果</h4>
-                                            <ul className="space-y-2">
+                                            <div className="space-y-3">
                                                 {selectedLog.analyzed_data?.foods?.map((food: any, idx: number) => (
-                                                    <li key={idx} className="flex justify-between items-start text-sm">
-                                                        <span className="text-sage-700">{food.name} <span className="text-sage-400 text-xs ml-1">({food.amount}g)</span></span>
-                                                        <span className="text-sage-900 font-medium">{Math.round(food.calories)} <span className="text-xs text-sage-500 font-normal">kcal</span></span>
-                                                    </li>
+                                                    <div key={idx} className="bg-white border border-sage-200 rounded-xl p-3 shadow-sm flex flex-col gap-2">
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="font-bold text-sage-800 text-sm">{food.name} <span className="text-sage-500 text-xs font-normal ml-1">({food.amount})</span></div>
+                                                        </div>
+                                                        <div className="grid grid-cols-4 gap-2 bg-sage-50 rounded-lg p-2 text-center text-xs border border-sage-100/50">
+                                                            <div>
+                                                                <span className="block text-[10px] text-sage-400 mb-0.5">kcal</span>
+                                                                <span className="font-bold text-sage-700">{Math.round(food.calories)}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="block text-[10px] text-sage-400 mb-0.5">Pro(g)</span>
+                                                                <span className="font-semibold text-sage-600">{Math.round(food.protein)}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="block text-[10px] text-sage-400 mb-0.5">Fat(g)</span>
+                                                                <span className="font-semibold text-sage-600">{Math.round(food.fat)}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="block text-[10px] text-sage-400 mb-0.5">Carb(g)</span>
+                                                                <span className="font-semibold text-sage-600">{Math.round(food.carbs)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 ))}
                                                 {(!selectedLog.analyzed_data?.foods || selectedLog.analyzed_data.foods.length === 0) && (
-                                                    <li className="text-sage-500 text-sm">内訳データがありません</li>
+                                                    <div className="text-sage-500 text-sm py-2">内訳データがありません</div>
                                                 )}
-                                            </ul>
+                                            </div>
                                         </div>
 
                                         <div className="bg-sage-50 rounded-xl p-4">

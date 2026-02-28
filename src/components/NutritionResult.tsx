@@ -58,8 +58,8 @@ export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn }: Nut
       <SummaryCard summary={summary} />
 
       <div>
-        <h3 className="text-sm font-medium text-sage-700 mb-2">検出した料理・食品</h3>
-        <div className="overflow-x-auto rounded-box border border-sage-200 bg-base-100 shadow-sm">
+        <h3 className="text-sm font-medium text-sage-700 mb-2 mt-4 sm:mt-0">検出した料理・食品</h3>
+        <div className="hidden sm:block overflow-x-auto rounded-box border border-sage-200 bg-base-100 shadow-sm">
           <table className="table table-sm text-sage-700">
             <thead className="bg-sage-50 text-sage-700 border-b border-sage-200">
               <tr>
@@ -87,6 +87,40 @@ export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn }: Nut
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* モバイル用のカード型表示 */}
+        <div className="sm:hidden flex flex-col gap-3">
+          {foods.map((food, i) => (
+            <div key={`mobile-${food.name}-${i}`} className="bg-base-100 border border-sage-200 rounded-xl p-4 shadow-sm">
+              <div className="flex justify-between items-start mb-3 border-b border-sage-100 pb-2">
+                <span className="font-bold text-sage-800 break-words flex-1 pr-2">{food.name}</span>
+                {food.amount && (
+                  <span className="text-xs text-sage-500 bg-sage-50 px-2 py-1 rounded-md shrink-0 whitespace-nowrap">
+                    {food.amount}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-sm">
+                <div className="flex justify-between items-center bg-sage-50/50 p-2 rounded-lg col-span-2">
+                  <span className="text-sage-600 font-medium text-xs">🔥 カロリー</span>
+                  <span className="font-bold text-sage-800">{food.calories} <span className="text-xs text-sage-500 font-normal">kcal</span></span>
+                </div>
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-sage-500 text-xs">💪 P</span>
+                  <span className="font-semibold text-sage-700">{food.protein}<span className="text-[10px] text-sage-400 font-normal ml-0.5">g</span></span>
+                </div>
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-sage-500 text-xs">🥑 F</span>
+                  <span className="font-semibold text-sage-700">{food.fat}<span className="text-[10px] text-sage-400 font-normal ml-0.5">g</span></span>
+                </div>
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-sage-500 text-xs">🌾 C</span>
+                  <span className="font-semibold text-sage-700">{food.carbs}<span className="text-[10px] text-sage-400 font-normal ml-0.5">g</span></span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
