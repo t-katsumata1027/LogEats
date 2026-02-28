@@ -22,13 +22,6 @@ export function HeaderNav() {
             >
                 履歴
             </Link>
-            <Link
-                href="/settings"
-                role="tab"
-                className={`tab tab-sm sm:tab-md whitespace-nowrap px-3 ${pathname === '/settings' ? 'tab-active bg-sage-100 text-sage-900 font-bold' : 'text-sage-600 hover:text-sage-800'}`}
-            >
-                設定
-            </Link>
         </div>
     );
 }
