@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getCurrentUserEmail } from "@/auth";
 import OpenAI from "openai";
 
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await auth();
+        const email = await getCurrentUserEmail();
         const adminEmail = process.env.ADMIN_EMAIL;
-        if (!session?.user?.email || session.user.email !== adminEmail) {
+        if (!email || email !== adminEmail) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

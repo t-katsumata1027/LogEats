@@ -1,11 +1,11 @@
-import { auth } from "@/auth";
-import { SignIn, SignOut } from "@/components/AuthButtons";
+import { currentUser } from "@clerk/nextjs/server";
+import { SignInButton, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { Dashboard } from "@/components/Dashboard";
 
 import { HeaderNav } from "@/components/HeaderNav";
 
 export default async function DashboardPage() {
-    const session = await auth();
+    const user = await currentUser();
 
     return (
         <main className="min-h-screen">
@@ -21,22 +21,22 @@ export default async function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                         <HeaderNav />
-                        {session?.user ? (
+                        <SignedIn>
                             <div className="flex items-center gap-2 sm:gap-3">
-                                {session.user.image && (
-                                    <img src={session.user.image} alt="User avatar" className="w-8 h-8 rounded-full border border-sage-200" />
-                                )}
-                                <SignOut />
+                                <UserButton />
                             </div>
-                        ) : (
-                            <SignIn />
-                        )}
+                        </SignedIn>
+                        <SignedOut>
+                            <SignInButton mode="modal">
+                                <button className="btn btn-sm btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm rounded-full px-4">ログイン</button>
+                            </SignInButton>
+                        </SignedOut>
                     </div>
                 </div>
             </header>
 
             <div className="max-w-2xl mx-auto px-4 py-6">
-                {!session ? (
+                {!user ? (
                     <div className="p-4 rounded-xl bg-sage-50 border border-sage-200 text-sm text-sage-800 flex items-start gap-3">
                         <span className="text-xl">💡</span>
                         <div>
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
                         </div>
                     </div>
                 ) : (
-                    <Dashboard isLoggedIn={!!session} />
+                    <Dashboard isLoggedIn={!!user} />
                 )}
             </div>
         </main>

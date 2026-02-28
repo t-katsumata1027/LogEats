@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
-import { auth } from "@/auth";
+import { getDbUserId } from "@/auth";
 
 export async function PATCH(request: Request) {
     try {
-        const session = await auth();
-        if (!session?.user?.id) {
+        const userId = await getDbUserId();
+        if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -38,7 +38,7 @@ export async function PATCH(request: Request) {
                 target_fat = ${target_fat ?? null},
                 target_carbs = ${target_carbs ?? null},
                 tolerance_pct = ${tolerance_pct ?? 10}
-            WHERE id = ${session.user.id}
+            WHERE id = ${userId}
             RETURNING id, target_calories, target_protein, target_fat, target_carbs, tolerance_pct,
                       age, gender, height, weight, target_weight, activity_level;
         `;

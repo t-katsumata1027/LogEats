@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
-import { auth } from "@/auth";
+import { getDbUserId } from "@/auth";
 import OpenAI from "openai";
 import type { AnalyzedFood } from "@/lib/types";
 
@@ -65,8 +65,8 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth();
-        if (!session?.user?.id) {
+        const userId = await getDbUserId();
+        if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -165,7 +165,7 @@ export async function POST(
                 total_fat = ${totalFat},
                 total_carbs = ${totalCarbs},
                 analyzed_data = ${JSON.stringify({ foods })}
-            WHERE id = ${logId} AND user_id = ${session.user.id}
+            WHERE id = ${logId} AND user_id = ${userId}
             RETURNING id;
         `;
 

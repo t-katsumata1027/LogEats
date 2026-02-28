@@ -1,5 +1,5 @@
-import { SignIn, SignOut } from "@/components/AuthButtons";
-import { auth } from "@/auth";
+import { SignInButton, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { AnalyzerClient } from "@/components/AnalyzerClient";
 import { HeaderNav } from "@/components/HeaderNav";
 import { AddToHomeScreen, AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScreen";
@@ -7,7 +7,7 @@ import { WeeklyChartDemo } from "@/components/WeeklyChartDemo";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
 
 export default async function Home() {
-  const session = await auth();
+  const { userId } = await auth();
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -66,34 +66,24 @@ export default async function Home() {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {!session?.user && <AddToHomeScreen />}
-            {session?.user ? (
-              <>
-                <HeaderNav />
-                <div className="flex items-center gap-2 sm:gap-3">
-                  {session.user.email === process.env.ADMIN_EMAIL && (
-                    <a
-                      href="/admin"
-                      className="btn btn-xs sm:btn-sm btn-outline border-sage-300 text-sage-700 hover:bg-sage-100 hover:border-sage-400 hidden sm:flex items-center gap-1"
-                    >
-                      <span>⚙️</span>管理画面
-                    </a>
-                  )}
-                  {session.user.image && (
-                    <img src={session.user.image} alt="User avatar" className="w-8 h-8 rounded-full border border-sage-200" />
-                  )}
-                  <SignOut />
-                </div>
-              </>
-            ) : (
-              <SignIn />
-            )}
+            <SignedOut>
+              <AddToHomeScreen />
+              <SignInButton mode="modal">
+                <button className="btn btn-sm btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm rounded-full px-4">ログイン / 登録</button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <HeaderNav />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <UserButton />
+              </div>
+            </SignedIn>
           </div>
         </div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-8">
-        {!session ? (
+        <SignedOut>
           <>
             {/* Hero Section */}
             <div className="text-center py-6 sm:py-10 mb-8 animate-fade-in-up">
@@ -105,7 +95,11 @@ export default async function Home() {
                 まずはログインなしで、下から画像解析を試してみてください👇
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                <SignIn />
+                <SignInButton mode="modal">
+                  <button className="btn btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none shadow-[0_4px_14px_0_rgba(107,142,107,0.39)] hover:shadow-[0_6px_20px_rgba(107,142,107,0.23)] rounded-full px-8 font-bold text-lg animate-bounce-subtle">
+                    無料で始める
+                  </button>
+                </SignInButton>
                 <span className="text-xs text-sage-400 font-medium">※無料で始められます</span>
               </div>
               {/* ① ホーム画面追加カード（スマホ向け） */}
@@ -118,7 +112,7 @@ export default async function Home() {
                 <h3 className="text-xl font-bold text-sage-800 tracking-tight text-center mb-6 flex items-center justify-center gap-2">
                   <span>✨</span> ログイン不要でお試し
                 </h3>
-                <AnalyzerClient isLoggedIn={!!session} />
+                <AnalyzerClient isLoggedIn={false} />
               </div>
             </div>
 
@@ -295,15 +289,18 @@ export default async function Home() {
             <div className="text-center py-12 px-6 border border-sage-200 bg-sage-50/50 rounded-3xl mb-8">
               <h3 className="text-2xl font-bold text-sage-800 mb-3 tracking-tight">さっそく毎日の食事を記録しましょう</h3>
               <p className="text-sage-500 text-sm mb-6">ログインして、目標PFCの設定からスタート！</p>
-              <SignIn />
+              <SignInButton mode="modal">
+                <button className="btn btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none rounded-full px-8 font-bold">ログイン / 登録</button>
+              </SignInButton>
             </div>
           </>
-        ) : (
+        </SignedOut>
+        <SignedIn>
           <div className="flex flex-col gap-12">
-            <AnalyzerClient isLoggedIn={!!session} />
+            <AnalyzerClient isLoggedIn={true} />
             <ReleaseNotes />
           </div>
-        )}
+        </SignedIn>
       </div>
       {/* ② ホーム画面追加 固定バナー（スマホ向け） */}
       <AddToHomeBanner />

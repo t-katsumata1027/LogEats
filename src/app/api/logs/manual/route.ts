@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getDbUserId } from "@/auth";
 import { sql } from "@vercel/postgres";
 import OpenAI from "openai";
 import {
@@ -201,8 +201,8 @@ async function estimateNutritionWithAI(
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    const isGuest = !session?.user?.id;
+    const userId = await getDbUserId();
+    const isGuest = !userId;
 
     const body = await request.json();
     const { text, meal_type: bodyMealType, logged_at } = body;
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
               user_id, image_url, total_calories, total_protein,
               total_fat, total_carbs, analyzed_data, meal_type, logged_at
             ) VALUES (
-              ${session.user?.id},
+              ${userId},
               NULL,
               ${totalCalories},
               ${totalProtein},
@@ -306,7 +306,7 @@ export async function POST(request: NextRequest) {
               user_id, image_url, total_calories, total_protein,
               total_fat, total_carbs, analyzed_data, meal_type
             ) VALUES (
-              ${session.user?.id},
+              ${userId},
               NULL,
               ${totalCalories},
               ${totalProtein},

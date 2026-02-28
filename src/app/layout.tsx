@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Zen_Kaku_Gothic_New } from "next/font/google";
+import { ClerkProvider } from '@clerk/nextjs';
+import { jaJP } from '@clerk/localizations';
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -19,7 +21,7 @@ const zenGothic = Zen_Kaku_Gothic_New({
 
 import { BottomNav } from "@/components/BottomNav";
 import { Footer } from "@/components/Footer";
-import { auth } from "@/auth";
+import { auth } from '@clerk/nextjs/server';
 import { EventTracker } from "@/components/EventTracker";
 
 export const viewport: Viewport = {
@@ -75,20 +77,22 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
+  const { userId } = await auth();
 
   return (
-    <html lang="ja" data-theme="pastel">
-      <body className={`min-h-screen ${inter.variable} ${zenGothic.variable} font-sans antialiased bg-cream text-sage-900 flex flex-col ${session ? "pb-20 sm:pb-0" : ""}`}>
-        <EventTracker />
-        <div className="flex-1">
-          {children}
-        </div>
-        {!session && <Footer />}
-        {session && <BottomNav />}
-        <Analytics />
-        <SpeedInsights />
-      </body>
-    </html>
+    <ClerkProvider localization={jaJP}>
+      <html lang="ja" data-theme="pastel">
+        <body className={`min-h-screen ${inter.variable} ${zenGothic.variable} font-sans antialiased bg-cream text-sage-900 flex flex-col ${userId ? "pb-20 sm:pb-0" : ""}`}>
+          <EventTracker />
+          <div className="flex-1">
+            {children}
+          </div>
+          {!userId && <Footer />}
+          {userId && <BottomNav />}
+          <Analytics />
+          <SpeedInsights />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
-import { auth } from "@/auth";
+import { getDbUserId } from "@/auth";
 
 export async function POST(request: NextRequest) {
     try {
@@ -10,8 +10,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Missing event_type or path" }, { status: 400 });
         }
 
-        const session = await auth();
-        const userId = session?.user?.id || null;
+        const userId = await getDbUserId();
 
         await sql`
       INSERT INTO access_logs (user_id, event_type, path, duration_ms, action_detail)

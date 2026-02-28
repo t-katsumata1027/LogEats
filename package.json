@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/localizations": "^3.37.2",
+    "@clerk/nextjs": "^6.39.0",
     "@google/genai": "^1.0.0",
     "@vercel/analytics": "^1.6.1",
     "@vercel/blob": "^2.3.0",
@@ -19,7 +21,6 @@
     "heic2any": "^0.0.4",
     "lucide-react": "^0.575.0",
     "next": "^15.0.0",
-    "next-auth": "^5.0.0-beta.30",
     "openai": "^4.73.0",
     "react": "^19.0.0",
     "react-day-picker": "^9.13.2",

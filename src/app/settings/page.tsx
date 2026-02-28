@@ -1,19 +1,21 @@
 import { sql } from "@vercel/postgres";
-import { auth } from "@/auth";
-import { SignIn, SignOut } from "@/components/AuthButtons";
+import { currentUser } from "@clerk/nextjs/server";
+import { SignInButton, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { getDbUserId } from "@/auth";
 import { HeaderNav } from "@/components/HeaderNav";
 import { SettingsForm } from "@/components/SettingsForm";
 
 export default async function SettingsPage() {
-    const session = await auth();
+    const user = await currentUser();
+    const dbUserId = await getDbUserId();
 
     let userData = null;
-    if (session?.user?.id) {
+    if (dbUserId) {
         try {
             const { rows } = await sql`
                 SELECT target_calories, age, gender, height, weight, activity_level, target_weight
                 FROM users 
-                WHERE id = ${session.user.id} 
+                WHERE id = ${dbUserId} 
                 LIMIT 1
             `;
             if (rows.length > 0) {
@@ -33,36 +35,37 @@ export default async function SettingsPage() {
                     </h1>
                     <div className="flex items-center gap-4">
                         <HeaderNav />
-                        {session?.user ? (
+                        <SignedIn>
                             <div className="flex items-center gap-3">
-                                {session.user.image && (
-                                    <img src={session.user.image} alt="Profile" className="w-8 h-8 rounded-full border border-sage-200" />
-                                )}
+                                <UserButton />
                             </div>
-                        ) : (
-                            <SignIn />
-                        )}
+                        </SignedIn>
+                        <SignedOut>
+                            <SignInButton mode="modal">
+                                <button className="btn btn-sm btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm rounded-full px-4">ログイン</button>
+                            </SignInButton>
+                        </SignedOut>
                     </div>
                 </div>
             </header>
 
             <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-                {session?.user ? (
+                {user ? (
                     <>
                         {/* プロフィール情報表示とログアウト */}
                         <div className="bg-white rounded-2xl p-6 border border-sage-100 shadow-sm flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                {session.user.image ? (
-                                    <img src={session.user.image} alt="Profile" className="w-16 h-16 rounded-full ring-2 ring-sage-100" />
+                                {user.imageUrl ? (
+                                    <img src={user.imageUrl} alt="Profile" className="w-16 h-16 rounded-full ring-2 ring-sage-100" />
                                 ) : (
                                     <div className="w-16 h-16 rounded-full bg-sage-100 flex items-center justify-center text-2xl">👤</div>
                                 )}
                                 <div>
-                                    <h2 className="font-bold text-sage-800 text-lg">{session.user.name}</h2>
-                                    <p className="text-sm text-sage-500">{session.user.email}</p>
+                                    <h2 className="font-bold text-sage-800 text-lg">{user.fullName}</h2>
+                                    <p className="text-sm text-sage-500">{user.primaryEmailAddress?.emailAddress}</p>
                                 </div>
                             </div>
-                            <SignOut />
+                            {/* UserButton handles signout naturally, but keeping layout spacing */}
                         </div>
 
                         {/* 各種設定フォーム */}
@@ -75,7 +78,9 @@ export default async function SettingsPage() {
                         <p className="text-sage-600 text-sm mb-6">
                             目標カロリーを設定するには、ログインしてプロフイールを作成してください。
                         </p>
-                        <SignIn />
+                        <SignInButton mode="modal">
+                            <button className="btn btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none rounded-full px-8 font-bold">ログイン / 登録</button>
+                        </SignInButton>
                     </div>
                 )}
             </div>

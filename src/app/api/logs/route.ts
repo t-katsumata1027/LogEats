@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getDbUserId } from "@/auth";
 import { sql } from "@vercel/postgres";
 
 // ユーザーの過去の食事記録（meal_logs）を取得するAPI
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getDbUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         analyzed_data,
         logged_at
       FROM meal_logs
-      WHERE user_id = ${session.user.id}
+      WHERE user_id = ${userId}
       ORDER BY logged_at DESC
       LIMIT ${limit}
     `;
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     // ユーザーの目標カロリー・PFCも取得しておく
     const { rows: userRows } = await sql`
       SELECT target_calories, target_protein, target_fat, target_carbs, tolerance_pct
-      FROM users WHERE id = ${session.user.id} LIMIT 1
+      FROM users WHERE id = ${userId} LIMIT 1
     `;
     const targetCalories = userRows.length > 0 ? userRows[0].target_calories : null;
     const targetProtein = userRows.length > 0 ? userRows[0].target_protein : null;

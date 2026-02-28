@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
-import { auth } from "@/auth";
+import { getDbUserId } from "@/auth";
 
 export async function DELETE(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth();
-        if (!session?.user?.id) {
+        const userId = await getDbUserId();
+        if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -21,7 +21,7 @@ export async function DELETE(
         // 所有者確認と削除
         const result = await sql`
             DELETE FROM meal_logs 
-            WHERE id = ${logId} AND user_id = ${session.user.id}
+            WHERE id = ${logId} AND user_id = ${userId}
             RETURNING id;
         `;
 
@@ -41,8 +41,8 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth();
-        if (!session?.user?.id) {
+        const userId = await getDbUserId();
+        if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -78,7 +78,7 @@ export async function PATCH(
                 total_carbs = ${total_carbs},
                 analyzed_data = ${analyzed_data ? JSON.stringify(analyzed_data) : null},
                 meal_type = COALESCE(${safeMealType}, meal_type)
-            WHERE id = ${logId} AND user_id = ${session.user.id}
+            WHERE id = ${logId} AND user_id = ${userId}
             RETURNING id;
         `;
 

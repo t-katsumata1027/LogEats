@@ -11,7 +11,7 @@ import {
   type FoodMasterRecord,
 } from "@/lib/foodDatabase";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
-import { auth } from "@/auth";
+import { getDbUserId } from "@/auth";
 import { put } from "@vercel/blob";
 import { sql } from "@vercel/postgres";
 
@@ -334,15 +334,15 @@ export async function POST(request: NextRequest) {
     const summary = buildSummary(foods);
 
     // --- Phase 2: ログイン中ユーザーなら画像をBlobへアップロードしDBに記録する ---
-    const session = await auth();
+    const userId = await getDbUserId();
     let imageUrl = null;
     let savedLogId = null;
 
-    if (session?.user?.id) {
+    if (userId) {
       // 1. 画像をVercel Blobへアップロード (public access)
       try {
         const ext = image.name?.split('.').pop() || 'jpg';
-        const blobFilename = `meals/${session.user.id}_${Date.now()}.${ext}`;
+        const blobFilename = `meals/${userId}_${Date.now()}.${ext}`;
         const blobResult = await put(blobFilename, image, { access: 'public' });
         imageUrl = blobResult.url;
       } catch (e) {
@@ -361,7 +361,7 @@ export async function POST(request: NextRequest) {
             user_id, image_url, total_calories, total_protein, 
             total_fat, total_carbs, analyzed_data, meal_type
           ) VALUES (
-            ${session.user.id}, 
+            ${userId}, 
             ${imageUrl}, 
             ${summary.totalCalories}, 
             ${summary.totalProtein}, 
@@ -398,8 +398,7 @@ export async function POST(request: NextRequest) {
     // エラーログをDBに記録
     let savedLogId = null;
     try {
-      const session = await auth();
-      const userId = session?.user?.id || null;
+      const dbUserId = await getDbUserId();
       let errorMessage = "画像の解析に失敗しました";
       if (err.message) errorMessage += `: ${err.message}`;
 
@@ -413,7 +412,7 @@ export async function POST(request: NextRequest) {
         INSERT INTO error_logs (
           user_id, error_message, context
         ) VALUES (
-          ${userId ? Number(userId) : null}, 
+          ${dbUserId}, 
           ${errorMessage}, 
           ${JSON.stringify(context)}
         )

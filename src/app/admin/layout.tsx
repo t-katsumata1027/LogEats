@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getCurrentUserEmail } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, Users, FileText, AlertTriangle, ArrowLeft } from "lucide-react";
@@ -8,10 +8,10 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const session = await auth();
+    const email = await getCurrentUserEmail();
     const adminEmail = process.env.ADMIN_EMAIL;
 
-    if (!session?.user?.email || session.user.email !== adminEmail) {
+    if (!email || email !== adminEmail) {
         redirect("/");
     }
 
