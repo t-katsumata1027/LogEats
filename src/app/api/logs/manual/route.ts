@@ -295,7 +295,7 @@ export async function POST(request: NextRequest) {
               ${totalProtein},
               ${totalFat},
               ${totalCarbs},
-              ${JSON.stringify({ foods })},
+              ${JSON.stringify({ foods, original_text: text })},
               ${safeMealType},
               ${loggedAtValue}
             )
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
               ${totalProtein},
               ${totalFat},
               ${totalCarbs},
-              ${JSON.stringify({ foods })},
+              ${JSON.stringify({ foods, original_text: text })},
               ${safeMealType}
             )
             RETURNING id;

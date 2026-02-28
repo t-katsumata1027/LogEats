@@ -1,7 +1,9 @@
-import { SignInButton, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { AnalyzerClient } from "@/components/AnalyzerClient";
 import { HeaderNav } from "@/components/HeaderNav";
+import { CustomUserButton } from "@/components/CustomUserButton";
+import { RecordingTabs } from "@/components/RecordingTabs";
 import { AddToHomeScreen, AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScreen";
 import { WeeklyChartDemo } from "@/components/WeeklyChartDemo";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
@@ -76,36 +78,14 @@ export default async function Home() {
             <SignedIn>
               <HeaderNav />
               <div className="flex items-center gap-2 sm:gap-3">
-                <UserButton>
-                  <UserButton.MenuItems>
-                    <UserButton.Link
-                      label="設定"
-                      labelIcon={
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="w-4 h-4"
-                        >
-                          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      }
-                      href="/settings"
-                    />
-                  </UserButton.MenuItems>
-                </UserButton>
+                <CustomUserButton />
               </div>
             </SignedIn>
           </div>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-8">
         <SignedOut>
           <>
             {/* Hero Section */}
@@ -327,11 +307,10 @@ export default async function Home() {
         </SignedOut>
         <SignedIn>
           <div className="flex flex-col gap-12">
-            <AnalyzerClient isLoggedIn={true} />
-            <div className="w-full mb-4">
+            <RecordingTabs isLoggedIn={true} />
+            <div className="w-full mt-4 pb-20 sm:pb-4">
               <AdBanner adSlot="dashboard-top-slot" className="min-h-[100px]" />
             </div>
-            <ReleaseNotes />
           </div>
         </SignedIn>
       </div>

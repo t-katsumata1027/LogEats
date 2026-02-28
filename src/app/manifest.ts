@@ -11,15 +11,10 @@ export default function manifest(): MetadataRoute.Manifest {
         theme_color: "#fafafa",
         icons: [
             {
-                src: "/icon-192x192.png", // Next.js will use this or a generic placeholder if missing
-                sizes: "192x192",
+                src: "/ai-bot.png",
+                sizes: "any",
                 type: "image/png",
-            },
-            {
-                src: "/icon-512x512.png",
-                sizes: "512x512",
-                type: "image/png",
-            },
+            }
         ],
     };
 }

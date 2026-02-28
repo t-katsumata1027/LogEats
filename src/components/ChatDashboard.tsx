@@ -11,19 +11,35 @@ type MealLog = {
     total_protein: number;
     total_fat: number;
     total_carbs: number;
-    analyzed_data: { foods: AnalyzedFood[] };
+    analyzed_data: { foods: AnalyzedFood[]; original_text?: string };
     logged_at: string;
 };
 
 type ChatMessage = {
     id: string; // unique string (can be log id or temp id for user input)
-    role: "user" | "bot";
-    type: "text" | "image" | "log";
+    role: "user" | "bot" | "system";
+    type: "text" | "image" | "log" | "system_link";
     content?: string;
     imageUrl?: string;
     logData?: MealLog;
     timestamp: Date;
     isSending?: boolean;
+};
+
+const getResultPhrase = (log: any, timestamp: Date) => {
+    const totalKcal = Math.round(log.total_calories || 0);
+    const foodNames = log.analyzed_data?.foods ? log.analyzed_data.foods.map((f: any) => f.name).slice(0, 2).join('と') : '';
+    const foodSuffix = log.analyzed_data?.foods?.length > 2 ? 'など' : '';
+    const foodStr = foodNames ? `「${foodNames}${foodSuffix}」ですね！` : '';
+
+    const h = timestamp.getHours();
+    let greeting = "";
+    if (h >= 5 && h < 11) greeting = "おはようございます！朝食の記録ですね☀️\n";
+    else if (h >= 11 && h < 16) greeting = "お昼の記録ですね。午後も頑張りましょう🍽️\n";
+    else if (h >= 16 && h < 21) greeting = "今日もお疲れ様です！夕食を記録しました✨\n";
+    else greeting = "夜遅くまでお疲れ様です！しっかり記録しました🌙\n";
+
+    return `${foodStr}${greeting}約${totalKcal}kcalとして計算しておきました😊`;
 };
 
 export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
@@ -49,28 +65,84 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
             const data = await res.json();
             const logs: MealLog[] = data.logs || [];
 
-            // Convert logs to chat messages
-            const chatLogMessages: ChatMessage[] = logs.map(log => ({
-                id: `log-${log.id}`,
-                role: "bot",
-                type: "log",
-                logData: log,
-                timestamp: new Date(log.logged_at)
-            }));
+            const now = new Date();
+            const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 
-            // Sort ascending (oldest first, newest at the bottom)
-            chatLogMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+            const recentLogs = logs.filter(log => new Date(log.logged_at) >= yesterdayStart);
+            const olderLogs = logs.filter(log => new Date(log.logged_at) < yesterdayStart);
 
-            setMessages([
-                {
-                    id: "greeting",
+            const chatMessages: ChatMessage[] = [];
+
+            // Add system link if there are older logs
+            if (olderLogs.length > 0) {
+                chatMessages.push({
+                    id: "history_link",
+                    role: "system",
+                    type: "system_link",
+                    timestamp: new Date(yesterdayStart.getTime() - 1000)
+                });
+            }
+
+            // Convert recent logs to chat messages (user input + bot response)
+            recentLogs.forEach(log => {
+                const logTime = new Date(log.logged_at);
+                // User message (what they sent)
+                chatMessages.push({
+                    id: `user-${log.id}`,
+                    role: "user",
+                    type: log.image_url ? "image" : "text",
+                    content: log.image_url ? undefined : (log.analyzed_data?.original_text || "食事を記録しました"),
+                    imageUrl: log.image_url,
+                    timestamp: new Date(logTime.getTime() - 1000) // 1 second before bot
+                });
+
+                // Bot message (the conversational text)
+                chatMessages.push({
+                    id: `bot-text-${log.id}`,
                     role: "bot",
                     type: "text",
-                    content: "今日も1日頑張りましょう！食事の写真を送るかテキストで教えてください😊",
-                    timestamp: new Date(Date.now() - 10000000)
-                },
-                ...chatLogMessages
-            ]);
+                    content: getResultPhrase(log, logTime),
+                    timestamp: new Date(logTime.getTime() - 500) // 0.5s before card
+                });
+
+                // Bot message (the result card)
+                chatMessages.push({
+                    id: `bot-${log.id}`,
+                    role: "bot",
+                    type: "log",
+                    logData: log,
+                    timestamp: logTime
+                });
+            });
+
+            // Sort ascending (oldest first, newest at the bottom)
+            chatMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+            // Add today's greeting
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            const GREETINGS = [
+                "今日も1日頑張りましょう！食事の写真を送るかテキストで教えてください😊",
+                "今日の食事も記録して健康管理を続けましょう🍽️",
+                "食べたものを教えてくださいね。私がカロリーを計算します✨",
+                "お疲れ様です！食事の記録を忘れずに。写真でもテキストでもOKです📸",
+                "今日も健康的な1日にしましょう！何を食べたか教えてください🍎"
+            ];
+            // Use the date to pick a consistent greeting for the day
+            const greetingIndex = Math.floor(todayStart.getTime() / (1000 * 60 * 60 * 24)) % GREETINGS.length;
+
+            chatMessages.push({
+                id: "greeting",
+                role: "bot",
+                type: "text",
+                content: GREETINGS[greetingIndex],
+                timestamp: new Date(todayStart.getTime() + 1000) // 1 second after start of today
+            });
+
+            // Resort because we added a new message
+            chatMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+            setMessages(chatMessages);
         } catch (error) {
             console.error(error);
         } finally {
@@ -82,9 +154,27 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
         fetchLogs();
     }, []);
 
-    // Auto-scroll to bottom
+    // Auto-scroll to bottom using container scrollTop to avoid page jumping
+    const isInitialLoad = useRef(true);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (!scrollContainerRef.current) return;
+
+        if (isInitialLoad.current) {
+            // first load
+            if (messages.length > 0) {
+                // Instantly scroll to bottom without smooth animation
+                scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+                isInitialLoad.current = false;
+            }
+            return;
+        }
+
+        // Scroll smoothly for new messages
+        scrollContainerRef.current.scrollTo({
+            top: scrollContainerRef.current.scrollHeight,
+            behavior: "smooth"
+        });
     }, [messages]);
 
     const handleSendText = async (e?: React.FormEvent) => {
@@ -107,17 +197,28 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
         };
 
         // Add uncompleted bot message
+        const ackMsgId = `ack-${Date.now()}`;
+        const ackMsg: ChatMessage = {
+            id: ackMsgId,
+            role: "bot",
+            type: "text",
+            content: "ありがとうございます！内容を確認してカロリーを計算しています…少々お待ちくださいね🔍",
+            timestamp: new Date()
+        };
+
         const loadingMsgId = `loading-${Date.now()}`;
         const loadingMsg: ChatMessage = {
             id: loadingMsgId,
             role: "bot",
             type: "text",
-            content: "記録中…🔍 カロリーを計算しています！",
-            timestamp: new Date(),
+            content: "...", // Simulating typing
+            timestamp: new Date(Date.now() + 100),
             isSending: true
         };
 
-        setMessages(prev => [...prev, userMsg, loadingMsg]);
+        // Artificial delay for "human-like" feel
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setMessages(prev => [...prev, userMsg, ackMsg, loadingMsg]);
 
         try {
             const res = await fetch('/api/logs/manual', {
@@ -129,13 +230,56 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                 }),
             });
 
-            if (!res.ok) throw new Error("Failed to save");
-            await fetchLogs(); // 成功したら取り直して画面更新
-        } catch (error) {
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to save");
+            }
+
+            const data = await res.json();
+
+            const newLogData = {
+                id: data.savedLogId,
+                image_url: "",
+                meal_type: data.meal_type,
+                total_calories: data.totalCalories,
+                total_protein: data.totalProtein,
+                total_fat: data.totalFat,
+                total_carbs: data.totalCarbs,
+                analyzed_data: { foods: data.foods, original_text: textToSubmit },
+                logged_at: new Date().toISOString()
+            };
+
+            // 人間らしさのための遅延
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            // Remove loading msg and add the conversational text + result log msg
+            setMessages(prev => {
+                const withoutLoading = prev.filter(m => m.id !== loadingMsgId);
+                const nowTime = new Date();
+                return [
+                    ...withoutLoading,
+                    {
+                        id: `bot-text-${data.savedLogId || Date.now()}`,
+                        role: "bot",
+                        type: "text",
+                        content: getResultPhrase(newLogData, nowTime),
+                        timestamp: new Date(nowTime.getTime() + 100)
+                    },
+                    {
+                        id: `bot-log-${data.savedLogId || Date.now()}`,
+                        role: "bot",
+                        type: "log",
+                        logData: newLogData,
+                        timestamp: new Date(nowTime.getTime() + 200)
+                    }
+                ];
+            });
+
+        } catch (error: any) {
             console.error(error);
             setMessages(prev => prev.map(msg =>
                 msg.id === loadingMsgId
-                    ? { ...msg, content: "エラーが発生しました😢 もう一度試してください。", isSending: false }
+                    ? { ...msg, type: "text", content: error.message || "エラーが発生しました😢 もう一度試してください。", isSending: false }
                     : msg
             ));
         } finally {
@@ -159,17 +303,28 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
             timestamp: new Date(),
         };
 
+        const ackMsgId = `ack-img-${Date.now()}`;
+        const ackMsg: ChatMessage = {
+            id: ackMsgId,
+            role: "bot",
+            type: "text",
+            content: "写真ありがとうございます！美味しそうですね✨ いま画像から食事内容を解析しています…📸",
+            timestamp: new Date()
+        };
+
         const loadingMsgId = `loading-${Date.now()}`;
         const loadingMsg: ChatMessage = {
             id: loadingMsgId,
             role: "bot",
             type: "text",
-            content: "写真を解析中…しばらくお待ちください🍽️",
-            timestamp: new Date(),
+            content: "...", // Simulating typing
+            timestamp: new Date(Date.now() + 100),
             isSending: true
         };
 
-        setMessages(prev => [...prev, userMsg, loadingMsg]);
+        // Artificial delay for "human-like" feel
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setMessages(prev => [...prev, userMsg, ackMsg, loadingMsg]);
 
         try {
             // Compress Image
@@ -189,8 +344,8 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ image: base64Image }),
             });
-            if (!analyzeRes.ok) throw new Error("Failed to analyze image");
-            const analyzeData = await analyzeRes.json();
+            const analyzeData = await analyzeRes.json().catch(() => ({}));
+            if (!analyzeRes.ok) throw new Error(analyzeData.error || "画像の解析に失敗しました");
 
             // 2. Track / Save Log
             const trackRes = await fetch("/api/track", {
@@ -202,14 +357,41 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                     mealType: "other"
                 }),
             });
-            if (!trackRes.ok) throw new Error("Failed to save log");
+            const trackData = await trackRes.json().catch(() => ({}));
+            if (!trackRes.ok) throw new Error(trackData.error || "記録の保存に失敗しました");
 
-            await fetchLogs(); // Refresh logs to get the newly created log from DB
-        } catch (error) {
+            const savedLog = trackData.log;
+
+            // 人間らしさのための遅延
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            // Remove loading msg and add the conversational text + result log msg
+            setMessages(prev => {
+                const withoutLoading = prev.filter(m => m.id !== loadingMsgId);
+                const nowTime = new Date();
+                return [
+                    ...withoutLoading,
+                    {
+                        id: `bot-text-${savedLog?.id || Date.now()}`,
+                        role: "bot",
+                        type: "text",
+                        content: getResultPhrase(savedLog, nowTime),
+                        timestamp: new Date(nowTime.getTime() + 100)
+                    },
+                    {
+                        id: `bot-log-${savedLog?.id || Date.now()}`,
+                        role: "bot",
+                        type: "log",
+                        logData: savedLog,
+                        timestamp: new Date(nowTime.getTime() + 200)
+                    }
+                ];
+            });
+        } catch (error: any) {
             console.error(error);
             setMessages(prev => prev.map(msg =>
                 msg.id === loadingMsgId
-                    ? { ...msg, content: "画像の解析に失敗しました😢", isSending: false }
+                    ? { ...msg, type: "text", content: error.message || "画像の解析に失敗しました😢", isSending: false }
                     : msg
             ));
         } finally {
@@ -236,13 +418,15 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-160px)] sm:h-[calc(100vh-180px)] bg-[#F5F7F4] rounded-2xl border border-sage-200 shadow-inner overflow-hidden relative">
+        <div className="flex flex-col h-[calc(100dvh-220px)] sm:h-[600px] max-h-[800px] w-full bg-[#F5F7F4] rounded-2xl border border-sage-200 shadow-inner overflow-hidden relative">
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((msg, index) => {
                     // Date break logic
                     const isNewDay = index === 0 || messages[index - 1].timestamp.toDateString() !== msg.timestamp.toDateString();
+                    // Check if consecutive from bot to hide avatar/tail
+                    const isConsecutiveBot = index > 0 && !isNewDay && messages[index - 1].role === msg.role && msg.role === "bot";
 
                     return (
                         <div key={msg.id}>
@@ -254,52 +438,64 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                                 </div>
                             )}
 
-                            {msg.role === "user" ? (
+                            {msg.role === "system" ? (
+                                <div className="flex justify-center my-4 animate-fade-in-up">
+                                    <a href="/dashboard" className="bg-white border-2 border-sage-200 text-sage-600 text-xs font-bold px-4 py-2 rounded-full shadow-sm hover:bg-sage-50 transition-colors flex items-center gap-2">
+                                        📅 これ以前の履歴は履歴画面で確認できます ＞
+                                    </a>
+                                </div>
+                            ) : msg.role === "user" ? (
                                 <div className="chat chat-end animate-fade-in-up">
                                     <div className="chat-header text-[10px] text-sage-400 opacity-80 mb-1 mr-1">
                                         {formatTime(msg.timestamp)}
                                     </div>
-                                    <div className={`chat-bubble shadow-sm ${msg.type === "image" ? "bg-transparent p-0 shadow-none" : "bg-sage-600 text-white text-sm"}`}>
+                                    <div className={`chat-bubble shadow-sm bg-sage-600 text-white ${msg.type === "image" ? "p-1.5" : "text-sm"}`}>
                                         {msg.type === "text" && msg.content}
                                         {msg.type === "image" && (
-                                            <img src={msg.imageUrl} className="max-w-[200px] h-auto rounded-2xl border-2 border-sage-200 object-cover" alt="Uploaded" />
+                                            <img src={msg.imageUrl} className="max-w-[200px] sm:max-w-[240px] h-auto rounded-xl object-cover block" alt="Uploaded" />
                                         )}
                                     </div>
                                 </div>
                             ) : (
-                                <div className="chat chat-start animate-fade-in-up">
-                                    <div className="chat-image avatar">
-                                        <div className="w-8 h-8 rounded-full bg-sage-200 border border-sage-300 flex items-center justify-center text-lg shadow-sm">
-                                            🤖
+                                <div className={`chat chat-start animate-fade-in-up ${isConsecutiveBot ? '-mt-2' : ''}`}>
+                                    <div className={`chat-image avatar row-start-2 place-self-start mt-0.5 ${isConsecutiveBot ? 'invisible' : ''}`}>
+                                        <div className="w-10 h-10 rounded-full border border-sage-200 shadow-sm overflow-hidden bg-white">
+                                            <img src="/ai-bot.png" alt="AI Agent" className="w-full h-full object-cover scale-110" />
                                         </div>
                                     </div>
-                                    <div className="chat-header text-[10px] text-sage-400 opacity-80 mb-1 ml-1">
-                                        AI アシスタント
-                                        <time className="ml-1 text-[10px] opacity-50">{formatTime(msg.timestamp)}</time>
-                                    </div>
+
+                                    {!isConsecutiveBot && (
+                                        <div className="chat-header text-[10px] text-sage-400 opacity-80 mb-1 ml-1">
+                                            AI アシスタント
+                                            <time className="ml-1 text-[10px] opacity-50">{formatTime(msg.timestamp)}</time>
+                                        </div>
+                                    )}
 
                                     {msg.type === "text" && (
-                                        <div className={`chat-bubble bg-white text-sage-800 border border-sage-200 text-sm shadow-sm ${msg.isSending ? 'opacity-70 animate-pulse' : ''}`}>
+                                        <div className={`chat-bubble bg-white text-sage-800 border border-sage-200 text-sm shadow-sm whitespace-pre-wrap leading-relaxed ${msg.isSending ? 'opacity-70 animate-pulse' : ''} ${isConsecutiveBot ? 'before:hidden' : ''}`}>
                                             {msg.content}
                                         </div>
                                     )}
 
                                     {msg.type === "log" && msg.logData && (
-                                        <div className="chat-bubble bg-white text-sage-800 border-2 border-sage-200 text-sm shadow-sm p-0 overflow-hidden w-[240px] sm:w-[280px]">
-                                            {msg.logData.image_url && (
-                                                <figure className="h-32 bg-sage-100 relative w-full border-b border-sage-200">
-                                                    <img src={msg.logData.image_url} alt="Meal" className="absolute inset-0 w-full h-full object-cover" />
-                                                </figure>
-                                            )}
+                                        <div className={`chat-bubble bg-white text-sage-800 border-2 border-sage-200 text-sm shadow-sm p-0 overflow-hidden w-[240px] sm:w-[280px] ${isConsecutiveBot ? 'before:hidden' : ''}`}>
                                             <div className="p-3">
                                                 <div className="flex items-baseline gap-2 mb-2">
                                                     <span className="text-xl font-bold text-sage-900">{Math.round(msg.logData.total_calories)}</span>
                                                     <span className="text-xs text-sage-500 font-bold">kcal 記録しました！</span>
                                                 </div>
-                                                <p className="text-xs text-sage-600 line-clamp-2 leading-relaxed mb-3">
-                                                    {msg.logData.analyzed_data?.foods?.map((f: any) => f.name).join('、') || '食事記録'}
-                                                </p>
-                                                <div className="flex justify-between gap-1 text-[10px] font-bold">
+                                                <div className="text-xs text-sage-700 leading-relaxed mb-3">
+                                                    {msg.logData.analyzed_data?.foods?.length > 0 ? (
+                                                        <ul className="list-disc list-inside space-y-1">
+                                                            {msg.logData.analyzed_data.foods.map((f: any, i: number) => (
+                                                                <li key={i}>{f.name} {f.amount ? `(${f.amount})` : ''}</li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p>食事記録</p>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-between gap-1 text-[10px] font-bold mb-3">
                                                     <div className="bg-blue-50 text-blue-600 px-2 py-1 rounded-md flex-1 text-center border border-blue-100">
                                                         P: {Math.round(msg.logData.total_protein)}g
                                                     </div>
@@ -310,6 +506,9 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                                                         C: {Math.round(msg.logData.total_carbs)}g
                                                     </div>
                                                 </div>
+                                                <a href={`/dashboard?date=${new Date(msg.logData.logged_at).toISOString().split('T')[0]}&logId=${msg.logData.id}`} className="btn btn-sm btn-outline text-sage-600 border-sage-300 hover:bg-sage-600 hover:text-white w-full rounded-md font-bold transition-colors text-xs sm:text-sm">
+                                                    詳細や修正はコチラ ＞
+                                                </a>
                                             </div>
                                         </div>
                                     )}
