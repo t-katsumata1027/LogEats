@@ -6,6 +6,7 @@ import { jaJP } from '@clerk/localizations';
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { GoogleAnalytics } from '@next/third-parties/google';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -102,6 +103,9 @@ export default async function RootLayout({
           {userId && <BottomNav />}
           <Analytics />
           <SpeedInsights />
+          {process.env.NEXT_PUBLIC_GA_ID && (
+            <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+          )}
         </body>
       </html>
     </ClerkProvider>
