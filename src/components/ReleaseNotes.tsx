@@ -11,7 +11,23 @@ export function ReleaseNotes() {
                     <input type="radio" name="release-notes" defaultChecked />
                     <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
                         <span className="badge badge-success badge-sm text-white">New</span>
-                        <span>v1.3: トップページからのお試し解析とスマホ対応</span>
+                        <span>v1.4: まるでLINEのようなチャット記録UI ✨</span>
+                    </div>
+                    <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
+                        <p>記録画面が大きく進化しました！AIアシスタントとのチャット形式で、自然なやり取りをしながら食事記録ができるようになりました。</p>
+                        <ul className="list-disc list-inside mt-2 space-y-1 ml-1 text-xs">
+                            <li>写真やテキストを送ると、AIがフレンドリーに返答します。</li>
+                            <li>時間帯（朝・昼・夜）によってAIからの労いの言葉が変わります。</li>
+                            <li>チャット画面で直近2日間の自分の送信履歴（写真・テキスト）が確認できます。</li>
+                            <li>メニューから過去の「お知らせ」もいつでも見返せるようになりました。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div className="collapse collapse-plus bg-white border border-sage-100 shadow-sm hover:shadow-md transition-shadow">
+                    <input type="radio" name="release-notes" />
+                    <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
+                        <span className="badge badge-neutral badge-sm text-white">v1.3</span>
+                        <span>トップページからのお試し解析とスマホ対応</span>
                     </div>
                     <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
                         <p>未ログイン状態のトップページからでも、写真だけでなくテキスト入力による食事AI解析をお試しできるようになりました。また、スマートフォンでの解析結果表示（テーブルの横スクロール）をカード形式に改善し、より見やすくなりました。</p>
