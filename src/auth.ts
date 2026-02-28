@@ -11,24 +11,39 @@ export async function getDbUserId(): Promise<number | null> {
         const user = await currentUser();
         if (!user) return null;
 
-        const email = user.emailAddresses[0]?.emailAddress;
-        if (!email) return null;
+        const clerkId = user.id;
 
-        // まず取得を試みる
-        const { rows: selectRows } = await sql`SELECT id, name, image FROM users WHERE email = ${email}`;
+        // 1. まず clerk_id で検索（最も確実・不変のID）
+        const { rows: byClerkId } = await sql`SELECT id FROM users WHERE clerk_id = ${clerkId}`;
 
-        if (selectRows.length > 0) {
-            // プロフィール画像や名前が変わっている可能性があるが、毎回のUPDATEは重いので
-            // ここでは簡易的にIDだけを返す（厳密にする場合は名前/画像に変更があればUPDATEする）
-            return selectRows[0].id;
+        if (byClerkId.length > 0) {
+            return byClerkId[0].id;
         }
 
-        // 存在しなければINSERT (または競合時にUPDATEして返す)
+        // 2. clerk_id が無い場合（初回ログイン or 旧システムからの移行）：
+        // そのClerkユーザーが持っている「すべての」認証済みメアドを条件にし、一番古いDBアカウントと結合させる
+        const emails = user.emailAddresses.map(e => e.emailAddress);
+        if (emails.length > 0) {
+            const { rows: matchedUsers } = await sql`
+                SELECT id FROM users 
+                WHERE email = ANY(${emails as any}::text[]) 
+                ORDER BY id ASC LIMIT 1
+            `;
+            if (matchedUsers.length > 0) {
+                const dbId = matchedUsers[0].id;
+                // 見つかったら次回以降のために clerk_id を保存してアップデートする
+                await sql`UPDATE users SET clerk_id = ${clerkId} WHERE id = ${dbId}`;
+                return dbId;
+            }
+        }
+
+        // 3. 過去のアカウントに一切ヒットしなければ、完全に新規のアカウントとして作成
+        const primaryEmail = user.primaryEmailAddress?.emailAddress || user.emailAddresses[0]?.emailAddress;
+        if (!primaryEmail) return null;
+
         const { rows: insertRows } = await sql`
-            INSERT INTO users (name, email, image)
-            VALUES (${user.fullName || null}, ${email}, ${user.imageUrl || null})
-            ON CONFLICT (email) DO UPDATE 
-            SET name = EXCLUDED.name, image = EXCLUDED.image
+            INSERT INTO users (name, email, image, clerk_id)
+            VALUES (${user.fullName || null}, ${primaryEmail}, ${user.imageUrl || null}, ${clerkId})
             RETURNING id;
         `;
         return insertRows[0]?.id || null;
