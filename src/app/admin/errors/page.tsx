@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { sql } from "@vercel/postgres";
 import { format } from "date-fns";
 import { ExplainButton } from "./ExplainButton";
+import { CopyButton } from "./CopyButton";
 import { AlertCircle } from "lucide-react";
 
 export default async function AdminErrorsPage() {
@@ -51,8 +52,11 @@ export default async function AdminErrorsPage() {
 
                                 {error.context && (
                                     <div>
-                                        <p className="text-xs font-bold text-sage-500 mb-1 uppercase tracking-wider">Context</p>
-                                        <pre className="bg-sage-50 p-3 rounded-lg text-xs text-sage-700 overflow-x-auto border border-sage-100">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <p className="text-xs font-bold text-sage-500 uppercase tracking-wider">Context</p>
+                                            <CopyButton textToCopy={JSON.stringify(error.context, null, 2)} />
+                                        </div>
+                                        <pre className="bg-sage-50 p-3 rounded-lg text-xs text-sage-700 overflow-x-auto border border-sage-100 whitespace-pre-wrap break-all">
                                             {JSON.stringify(error.context, null, 2)}
                                         </pre>
                                     </div>
