@@ -331,36 +331,30 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
             const { default: imageCompression } = await import("browser-image-compression");
             const compressedFile = await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1024 });
 
-            // Read as base64
-            const reader = new FileReader();
-            reader.readAsDataURL(compressedFile);
-            const base64Image = await new Promise<string>((resolve) => {
-                reader.onloadend = () => resolve(reader.result as string);
-            });
+            // Read as FormData instead of base64
+            const formData = new FormData();
+            formData.append("image", compressedFile, file.name);
+            formData.append("meal_type", "other");
 
-            // 1. Analyze
+            // 1. Analyze & Track (Analyze API automatically saves for logged-in users)
             const analyzeRes = await fetch("/api/analyze", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ image: base64Image }),
+                body: formData,
             });
             const analyzeData = await analyzeRes.json().catch(() => ({}));
             if (!analyzeRes.ok) throw new Error(analyzeData.error || "画像の解析に失敗しました");
 
-            // 2. Track / Save Log
-            const trackRes = await fetch("/api/track", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    foods: analyzeData.foods,
-                    image: base64Image,
-                    mealType: "other"
-                }),
-            });
-            const trackData = await trackRes.json().catch(() => ({}));
-            if (!trackRes.ok) throw new Error(trackData.error || "記録の保存に失敗しました");
-
-            const savedLog = trackData.log;
+            const savedLog = {
+                id: analyzeData.savedLogId,
+                image_url: imageUrl, // Use local blob url for immediate display
+                meal_type: "other",
+                total_calories: analyzeData.summary.totalCalories,
+                total_protein: analyzeData.summary.totalProtein,
+                total_fat: analyzeData.summary.totalFat,
+                total_carbs: analyzeData.summary.totalCarbs,
+                analyzed_data: { foods: analyzeData.foods, original_text: "" },
+                logged_at: new Date().toISOString()
+            };
 
             // 人間らしさのための遅延
             await new Promise(resolve => setTimeout(resolve, 600));
