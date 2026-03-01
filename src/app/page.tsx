@@ -1,10 +1,9 @@
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { AnalyzerClient } from "@/components/AnalyzerClient";
-import { HeaderNav } from "@/components/HeaderNav";
 import { CustomUserButton } from "@/components/CustomUserButton";
 import { RecordingTabs } from "@/components/RecordingTabs";
-import { AddToHomeScreen, AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScreen";
+import { AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScreen";
 import { WeeklyChartDemo } from "@/components/WeeklyChartDemo";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
 import { AdBanner } from "@/components/AdBanner";
@@ -58,32 +57,6 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <header className="border-b border-sage-200/60 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="text-xl font-semibold text-sage-800 tracking-tight">
-              Log-Eats
-            </div>
-            <p className="text-xs sm:text-sm text-sage-600 mt-1 leading-snug">
-              写真をアップロードすると、概算のカロリーと栄養素を表示します
-            </p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            <SignedOut>
-              <AddToHomeScreen />
-              <SignInButton mode="modal">
-                <button className="btn btn-sm btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm rounded-full px-4">ログイン / 登録</button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <HeaderNav />
-              <div className="flex items-center gap-2 sm:gap-3">
-                <CustomUserButton />
-              </div>
-            </SignedIn>
-          </div>
-        </div>
-      </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-8">
         <SignedOut>

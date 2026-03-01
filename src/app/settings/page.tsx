@@ -2,9 +2,8 @@ import { sql } from "@vercel/postgres";
 import { currentUser } from "@clerk/nextjs/server";
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { getDbUserId } from "@/auth";
-import { HeaderNav } from "@/components/HeaderNav";
 import { SettingsForm } from "@/components/SettingsForm";
-import { CustomUserButton } from "@/components/CustomUserButton";
+import Link from "next/link";
 
 export default async function SettingsPage() {
     const user = await currentUser();
@@ -29,28 +28,12 @@ export default async function SettingsPage() {
 
     return (
         <main className="min-h-screen">
-            <header className="border-b border-sage-200/60 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-                <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-                    <h1 className="text-xl font-semibold text-sage-800 tracking-tight">
+            <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+                <div className="mb-2">
+                    <h1 className="text-2xl font-bold text-sage-800 tracking-tight">
                         設定
                     </h1>
-                    <div className="flex items-center gap-4">
-                        <HeaderNav />
-                        <SignedIn>
-                            <div className="flex items-center gap-3">
-                                <CustomUserButton />
-                            </div>
-                        </SignedIn>
-                        <SignedOut>
-                            <SignInButton mode="modal">
-                                <button className="btn btn-sm btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm rounded-full px-4">ログイン</button>
-                            </SignInButton>
-                        </SignedOut>
-                    </div>
                 </div>
-            </header>
-
-            <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
                 {user ? (
                     <>
                         {/* プロフィール情報表示とログアウト */}
@@ -86,6 +69,23 @@ export default async function SettingsPage() {
                             >
                                 メールでお問い合わせ
                             </a>
+                        </div>
+
+                        {/* 法的情報 */}
+                        <div className="bg-white rounded-2xl p-6 border border-sage-100 shadow-sm mt-4">
+                            <h3 className="text-lg font-bold text-sage-800 mb-4 flex items-center gap-2">
+                                <span>📄</span> ご利用案内
+                            </h3>
+                            <div className="flex flex-col gap-2">
+                                <Link href="/terms" className="flex items-center justify-between p-3 rounded-xl hover:bg-sage-50 transition-colors text-sage-700 font-medium border border-transparent hover:border-sage-100">
+                                    <span>利用規約</span>
+                                    <span className="text-sage-400">＞</span>
+                                </Link>
+                                <Link href="/privacy" className="flex items-center justify-between p-3 rounded-xl hover:bg-sage-50 transition-colors text-sage-700 font-medium border border-transparent hover:border-sage-100">
+                                    <span>プライバシーポリシー</span>
+                                    <span className="text-sage-400">＞</span>
+                                </Link>
+                            </div>
                         </div>
                     </>
                 ) : (

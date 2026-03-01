@@ -17,15 +17,6 @@ export default async function AdminLayout({
 
     return (
         <div className="min-h-screen bg-sage-50 text-sage-900 pb-20 md:pb-0 z-[100] relative">
-            {/* Header */}
-            <header className="bg-white shadow px-6 py-4 flex justify-between items-center z-10 sticky top-0">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-clay to-mocha text-transparent bg-clip-text">Log-Eats Admin</h1>
-                <Link href="/" className="btn btn-ghost btn-sm text-sage-600 gap-2">
-                    <ArrowLeft className="w-4 h-4" />
-                    アプリへ戻る
-                </Link>
-            </header>
-
             <div className="flex">
                 {/* Sidebar */}
                 <aside className="w-64 bg-white shadow-sm min-h-[calc(100vh-64px)] hidden md:block">

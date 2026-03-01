@@ -25,6 +25,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Footer } from "@/components/Footer";
 import { auth } from '@clerk/nextjs/server';
 import { EventTracker } from "@/components/EventTracker";
+import { GlobalHeader } from "@/components/GlobalHeader";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -101,6 +102,7 @@ export default async function RootLayout({
         </head>
         <body className={`min-h-screen ${inter.variable} ${zenGothic.variable} font-sans antialiased bg-cream text-sage-900 flex flex-col ${userId ? "pb-20 sm:pb-0" : ""}`}>
           <EventTracker />
+          <GlobalHeader />
           <div className="flex-1">
             {children}
           </div>

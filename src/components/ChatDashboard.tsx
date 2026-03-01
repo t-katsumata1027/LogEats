@@ -415,17 +415,22 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
         <div className="flex flex-col h-[calc(100dvh-220px)] sm:h-[600px] max-h-[800px] w-full bg-[#F5F7F4] rounded-2xl border border-sage-200 shadow-inner overflow-hidden relative">
 
             {/* Messages Area */}
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col">
                 {messages.map((msg, index) => {
                     // Date break logic
                     const isNewDay = index === 0 || messages[index - 1].timestamp.toDateString() !== msg.timestamp.toDateString();
                     // Check if consecutive from bot to hide avatar/tail
                     const isConsecutiveBot = index > 0 && !isNewDay && messages[index - 1].role === msg.role && msg.role === "bot";
 
+                    let mtClass = index === 0 ? "" : "mt-4";
+                    if (isConsecutiveBot) {
+                        mtClass = "mt-1";
+                    }
+
                     return (
-                        <div key={msg.id}>
+                        <div key={msg.id} className={mtClass}>
                             {isNewDay && (
-                                <div className="text-center my-6">
+                                <div className="text-center mb-6 mt-2">
                                     <span className="bg-sage-200/50 text-sage-600 text-[11px] font-bold px-3 py-1 rounded-full">
                                         {formatDateBreak(msg.timestamp)}
                                     </span>
@@ -451,7 +456,7 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                                     </div>
                                 </div>
                             ) : (
-                                <div className={`chat chat-start animate-fade-in-up ${isConsecutiveBot ? '-mt-2' : ''}`}>
+                                <div className={`chat chat-start animate-fade-in-up`}>
                                     <div className={`chat-image avatar row-start-2 place-self-start mt-0.5 ${isConsecutiveBot ? 'invisible' : ''}`}>
                                         <div className="w-10 h-10 rounded-full border border-sage-200 shadow-sm overflow-hidden bg-white">
                                             <img src="/ai-bot.png" alt="AI Agent" className="w-full h-full object-cover scale-110" />
