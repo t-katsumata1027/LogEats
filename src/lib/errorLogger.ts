@@ -33,6 +33,7 @@ export async function logErrorAndNotify(
 
         // 2. Send Lark Notification
         await sendLarkNotification(
+            process.env.LARK_ERROR_WEBHOOK_URL,
             "❌ システムエラー発生",
             `【${processName}】\nユーザーID: ${dbUserId || "未ログイン"}\nエラー: ${errorMessage}\n\n詳細:\n${err.stack || err.name || "None"}`
         );

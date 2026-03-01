@@ -68,6 +68,7 @@ export async function POST(req: Request) {
         }
 
         await sendLarkNotification(
+            process.env.LARK_AUTH_WEBHOOK_URL,
             "🎉 新規ユーザー登録",
             `新しいユーザーが登録されました！\nID: ${id}\nEmail: ${email}\nName: ${name}`
         );
@@ -84,6 +85,7 @@ export async function POST(req: Request) {
         } catch (e) { }
 
         await sendLarkNotification(
+            process.env.LARK_AUTH_WEBHOOK_URL,
             "🔑 ユーザーログイン",
             `ユーザーがログインしました。\nユーザー: ${userName}\nID: ${user_id}`
         );

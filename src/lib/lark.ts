@@ -1,5 +1,4 @@
-export async function sendLarkNotification(title: string, message: string) {
-    const webhookUrl = process.env.LARK_WEBHOOK_URL;
+export async function sendLarkNotification(webhookUrl: string | undefined, title: string, message: string) {
     if (!webhookUrl) return;
 
     try {
