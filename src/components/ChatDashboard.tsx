@@ -160,21 +160,29 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
     useEffect(() => {
         if (!scrollContainerRef.current) return;
 
+        const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+            if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTo({
+                    top: scrollContainerRef.current.scrollHeight,
+                    behavior
+                });
+            }
+        };
+
         if (isInitialLoad.current) {
             // first load
             if (messages.length > 0) {
-                // Instantly scroll to bottom without smooth animation
-                scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+                // Instantly scroll to bottom without smooth animation, wait a bit for layout to settle
+                setTimeout(() => scrollToBottom("auto"), 10);
+                setTimeout(() => scrollToBottom("auto"), 150); // Fallback for image loads
                 isInitialLoad.current = false;
             }
             return;
         }
 
         // Scroll smoothly for new messages
-        scrollContainerRef.current.scrollTo({
-            top: scrollContainerRef.current.scrollHeight,
-            behavior: "smooth"
-        });
+        setTimeout(() => scrollToBottom("smooth"), 50);
+        setTimeout(() => scrollToBottom("smooth"), 200);
     }, [messages]);
 
     const handleSendText = async (e?: React.FormEvent) => {
@@ -415,7 +423,7 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
         <div className="flex flex-col h-[calc(100dvh-220px)] sm:h-[600px] max-h-[800px] w-full bg-[#F5F7F4] rounded-2xl border border-sage-200 shadow-inner overflow-hidden relative">
 
             {/* Messages Area */}
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 pt-4 pb-2 flex flex-col">
                 {messages.map((msg, index) => {
                     // Date break logic
                     const isNewDay = index === 0 || messages[index - 1].timestamp.toDateString() !== msg.timestamp.toDateString();
@@ -516,7 +524,7 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                         </div>
                     );
                 })}
-                <div ref={messagesEndRef} className="h-4" />
+                <div ref={messagesEndRef} />
             </div>
 
             {/* Input Area */}
@@ -555,6 +563,6 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                     </button>
                 </form>
             </div>
-        </div>
+        </div >
     );
 }
