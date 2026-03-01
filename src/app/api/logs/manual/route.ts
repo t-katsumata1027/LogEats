@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbUserId } from "@/auth";
+import { logErrorAndNotify } from "@/lib/errorLogger";
 import { sql } from "@vercel/postgres";
 import OpenAI from "openai";
 import {
@@ -343,6 +344,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Failed to create manual log:", error);
+    await logErrorAndNotify("テキストでの食事記録", error);
     return NextResponse.json(
       { error: "食事記録の保存に失敗しました。" },
       { status: 500 }

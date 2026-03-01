@@ -14,6 +14,7 @@ import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 import { getDbUserId } from "@/auth";
 import { put } from "@vercel/blob";
 import { sql } from "@vercel/postgres";
+import { logErrorAndNotify } from "@/lib/errorLogger";
 
 const PROMPT = `この写真に写っている料理・食品をすべて列挙し、JSONで返してください。
 コンビニエンスストアやスーパーの市販品（おにぎり、弁当、惣菜パッケージなど）が写っている場合は、パッケージの文字を読み取り、可能な限り正確な「メーカー名・ブランド名」や「具体的な商品名（例：セブンイレブンのふんわり玉子焼きと明太マヨネーズおにぎり）」を抽出して食品名としてください。
@@ -395,31 +396,7 @@ export async function POST(request: NextRequest) {
     console.error("=== API Analysis Error ===", e);
     const err = e as { status?: number; message?: string; name?: string; stack?: string };
 
-    // エラーログをDBに記録
-    let savedLogId = null;
-    try {
-      const dbUserId = await getDbUserId();
-      let errorMessage = "画像の解析に失敗しました";
-      if (err.message) errorMessage += `: ${err.message}`;
-
-      const context = {
-        name: err.name,
-        stack: err.stack,
-        useGemini: !!process.env.GEMINI_API_KEY
-      };
-
-      await sql`
-        INSERT INTO error_logs (
-          user_id, error_message, context
-        ) VALUES (
-          ${dbUserId}, 
-          ${errorMessage}, 
-          ${JSON.stringify(context)}
-        )
-      `;
-    } catch (dbError) {
-      console.error("Failed to save error_log to database:", dbError);
-    }
+    await logErrorAndNotify("画像の解析", e, { useGemini: !!process.env.GEMINI_API_KEY });
 
     let message = "画像の解析に失敗しました";
     if (err.message) {
