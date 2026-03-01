@@ -15,7 +15,7 @@ export function Footer() {
                 <div className="flex justify-center gap-4 text-xs opacity-60">
                     <Link href="/terms" className="hover:text-white transition-colors">利用規約</Link>
                     <Link href="/privacy" className="hover:text-white transition-colors">プライバシーポリシー</Link>
-                    <a href="#" className="hover:text-white transition-colors">お問い合わせ</a>
+                    <a href="mailto:support@log-eats.com" className="hover:text-white transition-colors">お問い合わせ</a>
                 </div>
                 <div className="mt-8 text-[10px] opacity-40">
                     &copy; {new Date().getFullYear()} Log-Eats. All rights reserved.

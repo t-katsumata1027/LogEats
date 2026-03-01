@@ -189,6 +189,42 @@ export function SettingsForm({ initialData }: { initialData: any }) {
                     </div>
                 )}
 
+                {/* 現在の設定値サマリー */}
+                <div className="mb-6 bg-white p-5 rounded-xl border border-sage-200 shadow-sm">
+                    <p className="text-sm font-bold text-sage-700 mb-4 border-b border-sage-100 pb-2">現在の目標設定</p>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="text-center flex-1">
+                            <div className="text-[11px] text-sage-500 font-medium mb-1">🔥 カロリー</div>
+                            <div className="text-2xl font-bold text-sage-900 leading-none">
+                                {initialData?.target_calories || "未設定"}
+                                {initialData?.target_calories && <span className="text-xs font-normal text-sage-500 ml-1">kcal</span>}
+                            </div>
+                        </div>
+                        <div className="w-px h-10 bg-sage-200 hidden sm:block"></div>
+                        <div className="text-center flex-1">
+                            <div className="text-[11px] text-sage-500 font-medium mb-1">💪 タンパク質</div>
+                            <div className="text-xl font-bold text-sage-900 leading-none">
+                                {initialData?.target_protein || "-"}
+                                {initialData?.target_protein && <span className="text-xs font-normal text-sage-500 ml-1">g</span>}
+                            </div>
+                        </div>
+                        <div className="text-center flex-1">
+                            <div className="text-[11px] text-sage-500 font-medium mb-1">🥑 脂質</div>
+                            <div className="text-xl font-bold text-sage-900 leading-none">
+                                {initialData?.target_fat || "-"}
+                                {initialData?.target_fat && <span className="text-xs font-normal text-sage-500 ml-1">g</span>}
+                            </div>
+                        </div>
+                        <div className="text-center flex-1">
+                            <div className="text-[11px] text-sage-500 font-medium mb-1">🌾 炭水化物</div>
+                            <div className="text-xl font-bold text-sage-900 leading-none">
+                                {initialData?.target_carbs || "-"}
+                                {initialData?.target_carbs && <span className="text-xs font-normal text-sage-500 ml-1">g</span>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* カロリー + PFC グリッド */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* カロリー */}

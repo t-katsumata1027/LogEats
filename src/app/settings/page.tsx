@@ -14,7 +14,7 @@ export default async function SettingsPage() {
     if (dbUserId) {
         try {
             const { rows } = await sql`
-                SELECT target_calories, age, gender, height, weight, activity_level, target_weight
+                SELECT target_calories, age, gender, height, weight, activity_level, target_weight, target_protein, target_fat, target_carbs, tolerance_pct
                 FROM users 
                 WHERE id = ${dbUserId} 
                 LIMIT 1
@@ -71,6 +71,22 @@ export default async function SettingsPage() {
 
                         {/* 各種設定フォーム */}
                         <SettingsForm initialData={userData} />
+
+                        {/* お問い合わせセクション */}
+                        <div className="bg-sage-50 rounded-2xl p-6 border border-sage-100 shadow-sm mt-8">
+                            <h3 className="text-lg font-bold text-sage-800 mb-2 flex items-center gap-2">
+                                <span>💬</span> サポート・お問い合わせ
+                            </h3>
+                            <p className="text-sm text-sage-600 mb-4">
+                                アプリの不具合、機能のご要望、その他に関するお問い合わせはこちらからお送りください。
+                            </p>
+                            <a
+                                href="mailto:support@log-eats.com"
+                                className="btn btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm rounded-xl w-full sm:w-auto"
+                            >
+                                メールでお問い合わせ
+                            </a>
+                        </div>
                     </>
                 ) : (
                     <div className="bg-white rounded-2xl p-8 border border-sage-100 shadow-sm text-center">

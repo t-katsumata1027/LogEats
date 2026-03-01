@@ -30,8 +30,9 @@ export function CustomUserButton() {
                     }
                     href="/news"
                 />
+                <UserButton.Action label="manageAccount" />
                 <UserButton.Link
-                    label="設定"
+                    label="目標・プロフィール設定"
                     labelIcon={
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -60,6 +61,7 @@ export function CustomUserButton() {
                         href="/admin"
                     />
                 )}
+                <UserButton.Action label="signOut" />
             </UserButton.MenuItems>
         </UserButton>
     );

@@ -74,6 +74,14 @@ export const metadata: Metadata = {
   },
 };
 
+const customLocalization = {
+  ...jaJP,
+  userButton: {
+    ...jaJP.userButton,
+    action__manageAccount: 'アカウント連携',
+  }
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -82,7 +90,7 @@ export default async function RootLayout({
   const { userId } = await auth();
 
   return (
-    <ClerkProvider localization={jaJP}>
+    <ClerkProvider localization={customLocalization}>
       <html lang="ja" data-theme="pastel">
         <head>
           <script
