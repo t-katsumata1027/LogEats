@@ -52,13 +52,13 @@ export default async function Home() {
   };
 
   return (
-    <main className="min-h-screen">
+    <main className="flex-1 flex flex-col">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-8">
+      <div className="flex-1 flex flex-col w-full max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-4">
         <SignedOut>
           <>
             {/* Hero Section */}
@@ -279,11 +279,8 @@ export default async function Home() {
           </>
         </SignedOut>
         <SignedIn>
-          <div className="flex flex-col gap-12">
+          <div className="flex flex-col w-full pb-0 h-[calc(100dvh-153px)] sm:h-[calc(100dvh-97px)]">
             <RecordingTabs isLoggedIn={true} />
-            <div className="w-full mt-4 pb-20 sm:pb-4">
-              <AdBanner adSlot="dashboard-top-slot" className="min-h-[100px]" />
-            </div>
           </div>
         </SignedIn>
       </div>

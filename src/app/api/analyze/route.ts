@@ -303,7 +303,20 @@ export async function POST(request: NextRequest) {
 
       // TODO: 実際のアプリでは "amount" の文字列から重量をさらに調整等が可能
       // 今回は一旦 DB標準値 / または AI推定重量 をそのまま使用する
-      const weightG = masterRecord.standard_weight_g;
+      let weightG = masterRecord.standard_weight_g;
+
+      // ユーザーが「g」や「ml」などで具体的な量を指定している場合はそちらを優先する
+      if (amount) {
+        const match = amount.match(/([0-9０-９]+(?:\.[0-9０-９]+)?)\s*(g|グラム|ml|ミリリットル)/i);
+        if (match) {
+          // 全角数字を半角に変換
+          const numStr = match[1].replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
+          const parsed = parseFloat(numStr);
+          if (!isNaN(parsed) && parsed > 0) {
+            weightG = parsed;
+          }
+        }
+      }
 
       // 重量に応じた成分量の計算
       const ratio = weightG / 100;
@@ -357,22 +370,50 @@ export async function POST(request: NextRequest) {
         const validMealTypes = ["breakfast", "lunch", "dinner", "snack", "other"];
         const safeMealType = validMealTypes.includes(mealType) ? mealType : "other";
 
-        const { rows } = await sql`
-          INSERT INTO meal_logs (
-            user_id, image_url, total_calories, total_protein, 
-            total_fat, total_carbs, analyzed_data, meal_type
-          ) VALUES (
-            ${userId}, 
-            ${imageUrl}, 
-            ${summary.totalCalories}, 
-            ${summary.totalProtein}, 
-            ${summary.totalFat}, 
-            ${summary.totalCarbs}, 
-            ${JSON.stringify({ foods })},
-            ${safeMealType}
-          )
-          RETURNING id;
-        `;
+        // Parse logged_at if provided
+        const loggedAtRaw = formData.get("logged_at") as string | null;
+        let loggedAtValue: string | null = null;
+        if (loggedAtRaw) {
+          const parsed = new Date(loggedAtRaw);
+          if (!isNaN(parsed.getTime())) {
+            loggedAtValue = parsed.toISOString();
+          }
+        }
+
+        const { rows } = loggedAtValue
+          ? await sql`
+            INSERT INTO meal_logs (
+              user_id, image_url, total_calories, total_protein, 
+              total_fat, total_carbs, analyzed_data, meal_type, logged_at
+            ) VALUES (
+              ${userId}, 
+              ${imageUrl}, 
+              ${summary.totalCalories}, 
+              ${summary.totalProtein}, 
+              ${summary.totalFat}, 
+              ${summary.totalCarbs}, 
+              ${JSON.stringify({ foods })},
+              ${safeMealType},
+              ${loggedAtValue}
+            )
+            RETURNING id;
+          `
+          : await sql`
+            INSERT INTO meal_logs (
+              user_id, image_url, total_calories, total_protein, 
+              total_fat, total_carbs, analyzed_data, meal_type
+            ) VALUES (
+              ${userId}, 
+              ${imageUrl}, 
+              ${summary.totalCalories}, 
+              ${summary.totalProtein}, 
+              ${summary.totalFat}, 
+              ${summary.totalCarbs}, 
+              ${JSON.stringify({ foods })},
+              ${safeMealType}
+            )
+            RETURNING id;
+          `;
         if (rows.length > 0) {
           savedLogId = rows[0].id;
         }

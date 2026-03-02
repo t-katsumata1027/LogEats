@@ -8,8 +8,8 @@ export function RecordingTabs({ isLoggedIn }: { isLoggedIn: boolean }) {
     const [activeTab, setActiveTab] = useState<"chat" | "classic">("chat");
 
     return (
-        <div className="flex flex-col h-full w-full">
-            <div className="flex justify-center mb-6">
+        <div className="flex flex-col h-full w-full flex-1">
+            <div className="flex justify-center mb-6 shrink-0">
                 <div role="tablist" className="tabs tabs-boxed bg-sage-50/50 p-1 border border-sage-200 shadow-sm">
                     <button
                         role="tab"
@@ -28,13 +28,13 @@ export function RecordingTabs({ isLoggedIn }: { isLoggedIn: boolean }) {
                 </div>
             </div>
 
-            <div className="flex-1 w-full">
+            <div className="flex-1 w-full flex flex-col min-h-0">
                 {activeTab === "chat" ? (
-                    <div className="h-full">
+                    <div className="flex-1 flex flex-col min-h-0">
                         <ChatDashboard isLoggedIn={isLoggedIn} />
                     </div>
                 ) : (
-                    <div>
+                    <div className="flex-1">
                         <AnalyzerClient isLoggedIn={isLoggedIn} />
                     </div>
                 )}

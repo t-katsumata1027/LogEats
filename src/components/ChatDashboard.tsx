@@ -47,6 +47,8 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
     const [loading, setLoading] = useState(true);
     const [inputText, setInputText] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [loggedAt, setLoggedAt] = useState<string>(""); // Added state for retrospective logging
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -235,6 +237,7 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                 body: JSON.stringify({
                     text: textToSubmit,
                     meal_type: "other",
+                    logged_at: loggedAt ? new Date(loggedAt).toISOString() : undefined,
                 }),
             });
 
@@ -254,7 +257,7 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                 total_fat: data.totalFat,
                 total_carbs: data.totalCarbs,
                 analyzed_data: { foods: data.foods, original_text: textToSubmit },
-                logged_at: new Date().toISOString()
+                logged_at: loggedAt ? new Date(loggedAt).toISOString() : new Date().toISOString()
             };
 
             // 人間らしさのための遅延
@@ -292,6 +295,8 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
             ));
         } finally {
             setIsSubmitting(false);
+            setLoggedAt(""); // Reset after submission
+            setShowDatePicker(false);
         }
     };
 
@@ -343,6 +348,9 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
             const formData = new FormData();
             formData.append("image", compressedFile, file.name);
             formData.append("meal_type", "other");
+            if (loggedAt) {
+                formData.append("logged_at", new Date(loggedAt).toISOString());
+            }
 
             // 1. Analyze & Track (Analyze API automatically saves for logged-in users)
             const analyzeRes = await fetch("/api/analyze", {
@@ -361,7 +369,7 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                 total_fat: analyzeData.summary.totalFat,
                 total_carbs: analyzeData.summary.totalCarbs,
                 analyzed_data: { foods: analyzeData.foods, original_text: "" },
-                logged_at: new Date().toISOString()
+                logged_at: loggedAt ? new Date(loggedAt).toISOString() : new Date().toISOString()
             };
 
             // 人間らしさのための遅延
@@ -399,6 +407,8 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
         } finally {
             setIsSubmitting(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
+            setLoggedAt(""); // Reset after submission
+            setShowDatePicker(false);
         }
     };
 
@@ -420,7 +430,7 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
     }
 
     return (
-        <div className="flex flex-col h-[calc(100dvh-220px)] sm:h-[600px] max-h-[800px] w-full bg-[#F5F7F4] rounded-2xl border border-sage-200 shadow-inner overflow-hidden relative">
+        <div className="flex flex-col flex-1 w-full bg-[#F5F7F4] rounded-2xl border border-sage-200 shadow-inner overflow-hidden relative h-full">
 
             {/* Messages Area */}
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 pt-4 pb-2 flex flex-col">
@@ -528,40 +538,81 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
             </div>
 
             {/* Input Area */}
-            <div className="bg-white border-t border-sage-200 p-3 flex gap-2 items-end">
-                <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleImageUpload}
-                />
-                <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isSubmitting}
-                    className="btn btn-circle btn-ghost bg-sage-100 text-sage-700 hover:bg-sage-200 disabled:bg-sage-50"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
-                </button>
+            <div className="bg-white border-t border-sage-200 p-3 flex flex-col gap-2">
+                {/* Date/Time Picker Modal or Inline */}
+                {showDatePicker && (
+                    <div className="flex gap-2 items-center bg-sage-50 p-2 rounded-xl animate-fade-in-up border border-sage-200">
+                        <span className="text-xs font-bold text-sage-600">記録日時:</span>
+                        <input
+                            type="datetime-local"
+                            value={loggedAt}
+                            onChange={(e) => setLoggedAt(e.target.value)}
+                            className="input input-sm input-bordered focus:outline-none focus:border-sage-400 bg-white text-xs flex-1"
+                            max={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setLoggedAt("");
+                                setShowDatePicker(false);
+                            }}
+                            className="btn btn-sm btn-ghost text-sage-500 hover:text-red-500"
+                        >
+                            クリア
+                        </button>
+                    </div>
+                )}
+                {!showDatePicker && loggedAt && (
+                    <div className="flex justify-between items-center bg-sage-50 px-3 py-1.5 rounded-lg border border-sage-200">
+                        <span className="text-xs font-bold text-sage-700">🕒 {new Date(loggedAt).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} に記録</span>
+                        <button onClick={() => setShowDatePicker(true)} className="text-xs text-sage-500 underline">変更</button>
+                    </div>
+                )}
 
-                <form onSubmit={handleSendText} className="flex-1 flex gap-2">
-                    <input
-                        type="text"
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        placeholder="例: おにぎり1個、サラダ"
-                        className="input input-bordered flex-1 focus:outline-none focus:border-sage-400 bg-sage-50/50 text-sm"
+                <div className="flex gap-2 items-end">
+                    <button
+                        type="button"
+                        onClick={() => setShowDatePicker(!showDatePicker)}
                         disabled={isSubmitting}
+                        className={`btn btn-circle btn-ghost ${showDatePicker || loggedAt ? 'bg-sage-200 text-sage-800' : 'bg-sage-100 text-sage-600'} hover:bg-sage-200 disabled:bg-sage-50 flex-shrink-0 transition-colors`}
+                        title="過去の日時で記録"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </button>
+                    <input
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handleImageUpload}
                     />
                     <button
-                        type="submit"
-                        disabled={!inputText.trim() || isSubmitting}
-                        className="btn btn-circle bg-sage-600 text-white hover:bg-sage-700 border-none disabled:bg-sage-200 disabled:text-sage-400 shadow-sm"
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isSubmitting}
+                        className="btn btn-circle btn-ghost bg-sage-100 text-sage-700 hover:bg-sage-200 disabled:bg-sage-50 flex-shrink-0"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
                     </button>
-                </form>
+
+                    <form onSubmit={handleSendText} className="flex-1 flex gap-2">
+                        <input
+                            type="text"
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            placeholder="例: おにぎり1個、サラダ"
+                            className="input input-bordered flex-1 focus:outline-none focus:border-sage-400 bg-sage-50/50 text-sm w-full"
+                            disabled={isSubmitting}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!inputText.trim() || isSubmitting}
+                            className="btn btn-circle bg-sage-600 text-white hover:bg-sage-700 border-none disabled:bg-sage-200 disabled:text-sage-400 shadow-sm flex-shrink-0"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div >
     );

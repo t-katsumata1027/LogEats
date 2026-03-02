@@ -249,7 +249,21 @@ export async function POST(request: NextRequest) {
         await addLearnedFood(name, masterRecord);
       }
 
-      const weightG = masterRecord.standard_weight_g;
+      let weightG = masterRecord.standard_weight_g;
+
+      // ユーザーが「g」や「ml」などで具体的な量を指定している場合はそちらを優先する
+      if (amount) {
+        const match = amount.match(/([0-9０-９]+(?:\.[0-9０-９]+)?)\s*(g|グラム|ml|ミリリットル)/i);
+        if (match) {
+          // 全角数字を半角に変換
+          const numStr = match[1].replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
+          const parsed = parseFloat(numStr);
+          if (!isNaN(parsed) && parsed > 0) {
+            weightG = parsed;
+          }
+        }
+      }
+
       const ratio = weightG / 100;
       const protein = masterRecord.per_100g.protein * ratio;
       const fat = masterRecord.per_100g.fat * ratio;
