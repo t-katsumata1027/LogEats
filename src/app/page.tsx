@@ -285,7 +285,9 @@ export default async function Home() {
         </SignedIn>
       </div>
       {/* ② ホーム画面追加 固定バナー（スマホ向け） */}
-      <AddToHomeBanner />
+      <SignedOut>
+        <AddToHomeBanner />
+      </SignedOut>
     </main>
   );
 }
