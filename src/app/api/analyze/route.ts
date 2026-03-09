@@ -100,7 +100,7 @@ function parseNutritionJson(content: string): FoodMasterRecord | null {
 }
 
 /** OpenAI Vision で写っている料理・食品リストを取得 */
-async function recognizeWithOpenAI(base64Image: string): Promise<{ foods: { name: string; amount?: string }[], is_ambiguous?: boolean, reason?: string }> {
+export async function recognizeWithOpenAI(base64Image: string): Promise<{ foods: { name: string; amount?: string }[], is_ambiguous?: boolean, reason?: string }> {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY ?? "",
     fetch: globalThis.fetch.bind(globalThis) // Edge Runtime の Illegal Invocation 対策
@@ -124,7 +124,7 @@ async function recognizeWithOpenAI(base64Image: string): Promise<{ foods: { name
 }
 
 /** Google Gemini で写っている料理・食品リストを取得（無料枠あり / Node.js非依存のためREST APIを使用） */
-async function recognizeWithGemini(base64Image: string): Promise<{ foods: { name: string; amount?: string }[], is_ambiguous?: boolean, reason?: string }> {
+export async function recognizeWithGemini(base64Image: string): Promise<{ foods: { name: string; amount?: string }[], is_ambiguous?: boolean, reason?: string }> {
   const apiKey = process.env.GEMINI_API_KEY ?? "";
   const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
@@ -173,7 +173,7 @@ async function recognizeWithGemini(base64Image: string): Promise<{ foods: { name
 }
 
 /** 食品名と目安量からAIで栄養素（100gあたり）と重量を推定 */
-async function estimateNutritionWithAI(foodName: string, amountStr?: string): Promise<FoodMasterRecord> {
+export async function estimateNutritionWithAI(foodName: string, amountStr?: string): Promise<FoodMasterRecord> {
   const useGemini = !!process.env.GEMINI_API_KEY;
   if (useGemini) {
     const apiKey = process.env.GEMINI_API_KEY ?? "";
@@ -233,11 +233,11 @@ async function estimateNutritionWithAI(foodName: string, amountStr?: string): Pr
 }
 
 /** カロリー検算（P: 4kcal/g, F: 9kcal/g, C: 4kcal/g） */
-function validateAndCalculateCalories(protein: number, fat: number, carbs: number): number {
+export function validateAndCalculateCalories(protein: number, fat: number, carbs: number): number {
   return (protein * 4) + (fat * 9) + (carbs * 4);
 }
 
-function buildSummary(foods: AnalyzedFood[]): NutritionSummary {
+export function buildSummary(foods: AnalyzedFood[]): NutritionSummary {
   return foods.reduce(
     (acc, f) => ({
       totalCalories: acc.totalCalories + f.calories,
@@ -249,7 +249,7 @@ function buildSummary(foods: AnalyzedFood[]): NutritionSummary {
   );
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   let binary = "";
   const bytes = new Uint8Array(buffer);
   const len = bytes.byteLength;

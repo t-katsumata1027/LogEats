@@ -51,27 +51,51 @@ export async function POST(req: Request) {
 
     const eventType = evt.type;
 
-    if (eventType === 'user.created') {
-        const { id, email_addresses, first_name, last_name } = evt.data;
+    if (eventType === 'user.created' || eventType === 'user.updated') {
+        const { id, email_addresses, first_name, last_name, external_accounts } = evt.data;
         const email = email_addresses?.[0]?.email_address || 'Unknown';
         const name = [first_name, last_name].filter(Boolean).join(' ') || 'Unknown';
 
-        // Insert to users table optionally if not already done by auth.ts
-        try {
-            await sql`
-        INSERT INTO users (id, email, name)
-        VALUES (${id}, ${email}, ${name})
-        ON CONFLICT (id) DO NOTHING
-      `;
-        } catch (e) {
-            console.error(e);
-        }
-
-        await sendLarkNotification(
-            process.env.LARK_AUTH_WEBHOOK_URL,
-            "🎉 新規ユーザー登録",
-            `新しいユーザーが登録されました！\nID: ${id}\nEmail: ${email}\nName: ${name}`
+        // Find LINE external account
+        const lineAccount = (external_accounts || []).find(
+            (acc: any) => acc.provider === 'oauth_line'
         );
+        const lineUserId = lineAccount ? lineAccount.provider_user_id || lineAccount.id : null;
+
+        if (eventType === 'user.created') {
+            // Insert to users table optionally if not already done by auth.ts
+            try {
+                await sql`
+                    INSERT INTO users (id, email, name, line_user_id)
+                    VALUES (${id}, ${email}, ${name}, ${lineUserId})
+                    ON CONFLICT (id) DO UPDATE SET 
+                        email = EXCLUDED.email, 
+                        name = EXCLUDED.name,
+                        line_user_id = COALESCE(users.line_user_id, EXCLUDED.line_user_id)
+                `;
+            } catch (e) {
+                console.error(e);
+            }
+
+            await sendLarkNotification(
+                process.env.LARK_AUTH_WEBHOOK_URL,
+                "🎉 新規ユーザー登録",
+                `新しいユーザーが登録されました！\nID: ${id}\nEmail: ${email}\nName: ${name}\nLINE連携: ${lineUserId ? '済み' : 'なし'}`
+            );
+        } else if (eventType === 'user.updated') {
+            // User updated - they might have linked a LINE account
+            try {
+                if (lineUserId) {
+                    await sql`
+                        UPDATE users 
+                        SET line_user_id = ${lineUserId} 
+                        WHERE id = ${id} AND (line_user_id IS NULL OR line_user_id != ${lineUserId})
+                    `;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
     } else if (eventType === 'session.created') {
         const { user_id } = evt.data;
 

@@ -12,6 +12,7 @@
     "@clerk/localizations": "^3.37.2",
     "@clerk/nextjs": "^6.39.0",
     "@google/genai": "^1.0.0",
+    "@line/bot-sdk": "^10.6.0",
     "@next/third-parties": "^16.1.6",
     "@vercel/analytics": "^1.6.1",
     "@vercel/blob": "^2.3.0",
