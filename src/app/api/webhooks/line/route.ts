@@ -22,6 +22,16 @@ export async function POST(req: NextRequest) {
         const rawBody = await req.text();
         const signature = req.headers.get("x-line-signature") || "";
 
+        const body = JSON.parse(rawBody);
+        const events: WebhookEvent[] = body.events;
+
+        // LINE Developers Consoleからの「検証」リクエストはeventsが空の配列で送られてくる。
+        // この検証リクエストには正しいsignatureが付与されていない場合があるため、
+        // eventsが空の場合は署名検証をスキップして200を返す。
+        if (!events || events.length === 0) {
+            return NextResponse.json({ success: true, message: "Verification success" });
+        }
+
         // Signature Validation
         const hash = crypto
             .createHmac('sha256', lineConfig.channelSecret)
@@ -31,9 +41,6 @@ export async function POST(req: NextRequest) {
         if (hash !== signature) {
             return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
         }
-
-        const body = JSON.parse(rawBody);
-        const events: WebhookEvent[] = body.events;
 
         for (const event of events) {
             if (event.type === 'message') {
