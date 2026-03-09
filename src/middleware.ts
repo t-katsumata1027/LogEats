@@ -4,6 +4,7 @@ const isPublicRoute = createRouteMatcher([
     '/',
     '/api/logs/manual(.*)',    // 公開API（未ログインでも利用可）
     '/api/analyze(.*)',        // 公開API（未ログインでも利用可）
+    '/api/webhooks/(.*)',      // ClerkやLINEのWebhook用ルート
     '/terms',
     '/privacy',
 ])
