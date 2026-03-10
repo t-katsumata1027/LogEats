@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { getDbUserId } from "@/auth";
 import { SettingsForm } from "@/components/SettingsForm";
+import { LineConnectionSettings } from "@/components/LineConnectionSettings";
 import Link from "next/link";
 
 export default async function SettingsPage() {
@@ -54,6 +55,9 @@ export default async function SettingsPage() {
 
                         {/* 各種設定フォーム */}
                         <SettingsForm initialData={userData} />
+
+                        {/* LINE連携 */}
+                        <LineConnectionSettings />
 
                         {/* お問い合わせセクション */}
                         <div className="bg-sage-50 rounded-2xl p-6 border border-sage-100 shadow-sm mt-8">

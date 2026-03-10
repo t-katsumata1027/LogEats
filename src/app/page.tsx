@@ -7,6 +7,7 @@ import { AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScre
 import { WeeklyChartDemo } from "@/components/WeeklyChartDemo";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
 import { AdBanner } from "@/components/AdBanner";
+import { LineConnectModalButton } from "@/components/LineConnectModalButton";
 
 export default async function Home() {
   const { userId } = await auth();
@@ -70,13 +71,16 @@ export default async function Home() {
                 写真を撮るだけで、カロリーとPFC（タンパク質・脂質・炭水化物）を自動計算。<br className="hidden sm:block" />
                 まずはログインなしで、下から画像解析を試してみてください👇
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                <SignInButton mode="modal">
-                  <button className="btn btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none shadow-[0_4px_14px_0_rgba(107,142,107,0.39)] hover:shadow-[0_6px_20px_rgba(107,142,107,0.23)] rounded-full px-8 font-bold text-lg animate-bounce-subtle">
-                    無料で始める
-                  </button>
-                </SignInButton>
-                <span className="text-xs text-sage-400 font-medium">※無料で始められます</span>
+              <div className="flex flex-col gap-3 justify-center items-center w-full">
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center">
+                  <LineConnectModalButton />
+                  <SignInButton mode="modal">
+                    <button className="btn btn-outline border-sage-300 hover:bg-sage-50 text-sage-700 rounded-full px-6 font-bold text-sm h-12">
+                      その他のログイン / 登録
+                    </button>
+                  </SignInButton>
+                </div>
+                <span className="text-[11px] text-sage-400 font-medium">※無料で始められます</span>
               </div>
               {/* ① ホーム画面追加カード（スマホ向け） */}
               <AddToHomeInlineCard />
