@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
                         if (!userId) {
                             replyText += `\n\n💡 LogEatsにサインインしてLINE連携を行うと、カレンダーに自動記録されます！\n👉 https://log-eats.com/`;
                         } else {
-                            replyText += `\n\n✅ 記録を確認する:\n👉 https://log-eats.com/`;
+                            replyText += `\n\n✅ 記録を確認する:\n👉 https://www.log-eats.com/dashboard`;
                         }
 
                         if (event.source.userId) {
