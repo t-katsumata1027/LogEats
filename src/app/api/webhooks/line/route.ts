@@ -48,6 +48,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
         }
 
+        let hasProcessedImage = false;
+
         for (const event of events) {
             if (event.type === 'message') {
                 const lineUserId = event.source.userId;
@@ -58,6 +60,15 @@ export async function POST(req: NextRequest) {
                 const userId = rows.length > 0 ? rows[0].id : null;
 
                 if (event.message.type === 'image') {
+                    if (hasProcessedImage) {
+                        // 既にこのWebhookリクエスト内で画像を処理している場合（複数同時送信）
+                        await lineClient.replyMessage({
+                            replyToken: event.replyToken,
+                            messages: [{ type: 'text', text: '⚠️ 複数画像が同時に送信されたため、最初の1枚のみを解析しました！\nお手数ですが、1枚ずつ別々に送信してください🙇‍♂️' }]
+                        });
+                        continue;
+                    }
+                    hasProcessedImage = true;
                     // 画像の場合、先にローディングメッセージとアニメーションを送信
                     if (event.source.userId) {
                         try {
