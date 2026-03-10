@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
 
                         // LINEに結果を返信
                         let replyText = userId ? `🍽️ 記録完了！\n` : `🍽️ 解析完了！\n`;
-                        replyText += `カロリー: ${summary.totalCalories}kcal\n[P] ${summary.totalProtein}g  [F] ${summary.totalFat}g  [C] ${summary.totalCarbs}g\n\n【内訳】\n`;
+                        replyText += `カロリー: ${summary.totalCalories}kcal\nタンパク質: ${Number(summary.totalProtein).toFixed(1)}g\n脂質: ${Number(summary.totalFat).toFixed(1)}g\n炭水化物: ${Number(summary.totalCarbs).toFixed(1)}g\n\n【内訳】\n`;
                         foods.forEach(f => {
                             replyText += `・${f.name} (${f.amount}) : ${f.calories}kcal\n`;
                         });
@@ -169,7 +169,9 @@ export async function POST(req: NextRequest) {
                             replyText += `\n⚠️ 写真が不鮮明で正しく分析できていない可能性があります`;
                         }
                         if (!userId) {
-                            replyText += `\n\n💡 LogEatsアプリでLINE連携を行うと、今後の写真が自動で食事カレンダーに保存されるようになります！`;
+                            replyText += `\n\n💡 LogEatsにサインインしてLINE連携を行うと、カレンダーに自動記録されます！\n👉 https://log-eats.com/`;
+                        } else {
+                            replyText += `\n\n✅ 記録を確認する:\n👉 https://log-eats.com/`;
                         }
 
                         await lineClient.replyMessage({
