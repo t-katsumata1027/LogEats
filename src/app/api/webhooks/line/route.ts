@@ -19,10 +19,10 @@ export const maxDuration = 60; // タイムアウト延長
 
 export async function POST(req: NextRequest) {
     try {
-        const rawBody = await req.text();
+        const buffer = Buffer.from(await req.arrayBuffer());
         const signature = req.headers.get("x-line-signature") || "";
 
-        const body = JSON.parse(rawBody);
+        const body = JSON.parse(buffer.toString('utf8'));
         const events: WebhookEvent[] = body.events;
 
         // LINE Developers Consoleからの「検証」リクエストはeventsが空の配列で送られてくる。
@@ -32,13 +32,19 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: true, message: "Verification success" });
         }
 
-        // Signature Validation
+        if (!lineConfig.channelSecret) {
+            console.error("LINE_CHANNEL_SECRET is not set in environment variables");
+            return NextResponse.json({ error: "Configuration Error" }, { status: 500 });
+        }
+
+        // Signature Validation using original bytes (Buffer)
         const hash = crypto
             .createHmac('sha256', lineConfig.channelSecret)
-            .update(rawBody)
+            .update(buffer)
             .digest('base64');
 
         if (hash !== signature) {
+            console.error(`Invalid signature. Expected: ${signature}, Got: ${hash}`);
             return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
         }
 
