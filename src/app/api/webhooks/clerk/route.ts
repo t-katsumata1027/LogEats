@@ -66,15 +66,15 @@ export async function POST(req: Request) {
             // Insert to users table optionally if not already done by auth.ts
             try {
                 await sql`
-                    INSERT INTO users (id, email, name, line_user_id)
+                    INSERT INTO users (clerk_id, email, name, line_user_id)
                     VALUES (${id}, ${email}, ${name}, ${lineUserId})
-                    ON CONFLICT (id) DO UPDATE SET 
+                    ON CONFLICT (clerk_id) DO UPDATE SET 
                         email = EXCLUDED.email, 
                         name = EXCLUDED.name,
                         line_user_id = COALESCE(users.line_user_id, EXCLUDED.line_user_id)
                 `;
             } catch (e) {
-                console.error(e);
+                console.error('Error inserting user:', e);
             }
 
             await sendLarkNotification(
@@ -89,11 +89,18 @@ export async function POST(req: Request) {
                     await sql`
                         UPDATE users 
                         SET line_user_id = ${lineUserId} 
-                        WHERE id = ${id} AND (line_user_id IS NULL OR line_user_id != ${lineUserId})
+                        WHERE clerk_id = ${id} AND (line_user_id IS NULL OR line_user_id != ${lineUserId})
+                    `;
+                } else {
+                    // Update to NULL if they unlinked
+                    await sql`
+                        UPDATE users 
+                        SET line_user_id = NULL 
+                        WHERE clerk_id = ${id} AND line_user_id IS NOT NULL
                     `;
                 }
             } catch (e) {
-                console.error(e);
+                console.error('Error updating config:', e);
             }
         }
     } else if (eventType === 'session.created') {
@@ -102,7 +109,7 @@ export async function POST(req: Request) {
         // Optional: get user details from DB to enrich message
         let userName = 'Unknown';
         try {
-            const { rows } = await sql`SELECT name, email FROM users WHERE id = ${user_id}`;
+            const { rows } = await sql`SELECT name, email FROM users WHERE clerk_id = ${user_id} LIMIT 1`;
             if (rows.length > 0) {
                 userName = `${rows[0].name || ''} (${rows[0].email || ''})`.trim();
             }

@@ -58,7 +58,32 @@ export async function POST(req: NextRequest) {
                 const userId = rows.length > 0 ? rows[0].id : null;
 
                 if (event.message.type === 'image') {
-                    // 画像の場合、解析処理を実行
+                    // 画像の場合、先にローディングメッセージとアニメーションを送信
+                    if (event.source.userId) {
+                        try {
+                            await fetch("https://api.line.me/v2/bot/chat/loading/start", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "Authorization": `Bearer ${lineConfig.channelAccessToken}`
+                                },
+                                body: JSON.stringify({
+                                    chatId: event.source.userId,
+                                    loadingSeconds: 60
+                                })
+                            });
+                        } catch (e) {
+                            console.error("Failed to start loading animation", e);
+                        }
+                    }
+
+                    // replyTokenは一度しか使えないため、ここで「分析中」メッセージを返す。最終結果はpushMessageで送る
+                    await lineClient.replyMessage({
+                        replyToken: event.replyToken,
+                        messages: [{ type: 'text', text: '🍽️ 写真を受け取ったよ！\nAIがカロリーを分析中だから数秒待ってね🔍' }]
+                    });
+
+                    // 解析処理を実行
                     try {
                         // 画像の取得
                         const streamOrBlob = await lineBlobClient.getMessageContent(event.message.id);
@@ -84,10 +109,12 @@ export async function POST(req: NextRequest) {
                             : await recognizeWithOpenAI(base64);
 
                         if (recognizedRaw.length === 0) {
-                            await lineClient.replyMessage({
-                                replyToken: event.replyToken,
-                                messages: [{ type: 'text', text: '料理が検出できませんでした😢 もう少しはっきりと写した写真をお試しください。' }]
-                            });
+                            if (event.source.userId) {
+                                await lineClient.pushMessage({
+                                    to: event.source.userId,
+                                    messages: [{ type: 'text', text: '料理が検出できませんでした😢 もう少しはっきりと写した写真をお試しください。' }]
+                                });
+                            }
                             continue;
                         }
 
@@ -159,7 +186,7 @@ export async function POST(req: NextRequest) {
                             `;
                         }
 
-                        // LINEに結果を返信
+                        // LINEに結果を返信 (Push)
                         let replyText = userId ? `🍽️ 記録完了！\n` : `🍽️ 解析完了！\n`;
                         replyText += `カロリー: ${summary.totalCalories}kcal\nタンパク質: ${Number(summary.totalProtein).toFixed(1)}g\n脂質: ${Number(summary.totalFat).toFixed(1)}g\n炭水化物: ${Number(summary.totalCarbs).toFixed(1)}g\n\n【内訳】\n`;
                         foods.forEach(f => {
@@ -174,17 +201,21 @@ export async function POST(req: NextRequest) {
                             replyText += `\n\n✅ 記録を確認する:\n👉 https://log-eats.com/`;
                         }
 
-                        await lineClient.replyMessage({
-                            replyToken: event.replyToken,
-                            messages: [{ type: 'text', text: replyText }]
-                        });
+                        if (event.source.userId) {
+                            await lineClient.pushMessage({
+                                to: event.source.userId,
+                                messages: [{ type: 'text', text: replyText }]
+                            });
+                        }
 
                     } catch (e) {
                         console.error("Error analyzing LINE image", e);
-                        await lineClient.replyMessage({
-                            replyToken: event.replyToken,
-                            messages: [{ type: 'text', text: 'エラーが発生しました💦 もう一度お試しください。' }]
-                        });
+                        if (event.source.userId) {
+                            await lineClient.pushMessage({
+                                to: event.source.userId,
+                                messages: [{ type: 'text', text: 'エラーが発生しました💦 もう一度お試しください。' }]
+                            });
+                        }
                     }
                 } else {
                     // 画像以外のメッセージ
