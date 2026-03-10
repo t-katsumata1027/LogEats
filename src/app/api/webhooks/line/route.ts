@@ -55,15 +55,7 @@ export async function POST(req: NextRequest) {
 
                 // DBからユーザー検索
                 const { rows } = await sql`SELECT id FROM users WHERE line_user_id = ${lineUserId} LIMIT 1`;
-                if (rows.length === 0) {
-                    await lineClient.replyMessage({
-                        replyToken: event.replyToken,
-                        messages: [{ type: 'text', text: 'LINE連携が完了していません。LogEatsの設定画面からLINE連携（サインイン）を行なってください。' }]
-                    });
-                    continue;
-                }
-
-                const userId = rows[0].id;
+                const userId = rows.length > 0 ? rows[0].id : null;
 
                 if (event.message.type === 'image') {
                     // 画像の場合、解析処理を実行
@@ -142,36 +134,42 @@ export async function POST(req: NextRequest) {
 
                         const summary = buildSummary(foods);
 
-                        // Blobストレージにアップロード
-                        const ext = "jpg";
-                        const blobFilename = `meals/${userId}_${Date.now()}.${ext}`;
-                        const blobResult = await put(blobFilename, new Blob([arrayBuffer], { type: 'image/jpeg' }), { access: 'public' });
-                        const imageUrl = blobResult.url;
+                        if (userId) {
+                            // Blobストレージにアップロード
+                            const ext = "jpg";
+                            const blobFilename = `meals/${userId}_${Date.now()}.${ext}`;
+                            const blobResult = await put(blobFilename, new Blob([arrayBuffer], { type: 'image/jpeg' }), { access: 'public' });
+                            const imageUrl = blobResult.url;
 
-                        // DBに記録
-                        await sql`
-              INSERT INTO meal_logs (
-                user_id, image_url, total_calories, total_protein, 
-                total_fat, total_carbs, analyzed_data, meal_type
-              ) VALUES (
-                ${userId}, 
-                ${imageUrl}, 
-                ${summary.totalCalories}, 
-                ${summary.totalProtein}, 
-                ${summary.totalFat}, 
-                ${summary.totalCarbs}, 
-                ${JSON.stringify({ foods })},
-                'other'
-              )
-            `;
+                            // DBに記録
+                            await sql`
+                              INSERT INTO meal_logs (
+                                user_id, image_url, total_calories, total_protein, 
+                                total_fat, total_carbs, analyzed_data, meal_type
+                              ) VALUES (
+                                ${userId}, 
+                                ${imageUrl}, 
+                                ${summary.totalCalories}, 
+                                ${summary.totalProtein}, 
+                                ${summary.totalFat}, 
+                                ${summary.totalCarbs}, 
+                                ${JSON.stringify({ foods })},
+                                'other'
+                              )
+                            `;
+                        }
 
                         // LINEに結果を返信
-                        let replyText = `🍽️ 記録完了！\nカロリー: ${summary.totalCalories}kcal\n[P] ${summary.totalProtein}g  [F] ${summary.totalFat}g  [C] ${summary.totalCarbs}g\n\n【内訳】\n`;
+                        let replyText = userId ? `🍽️ 記録完了！\n` : `🍽️ 解析完了！\n`;
+                        replyText += `カロリー: ${summary.totalCalories}kcal\n[P] ${summary.totalProtein}g  [F] ${summary.totalFat}g  [C] ${summary.totalCarbs}g\n\n【内訳】\n`;
                         foods.forEach(f => {
                             replyText += `・${f.name} (${f.amount}) : ${f.calories}kcal\n`;
                         });
                         if (is_ambiguous) {
                             replyText += `\n⚠️ 写真が不鮮明で正しく分析できていない可能性があります`;
+                        }
+                        if (!userId) {
+                            replyText += `\n\n💡 LogEatsアプリでLINE連携を行うと、今後の写真が自動で食事カレンダーに保存されるようになります！`;
                         }
 
                         await lineClient.replyMessage({
