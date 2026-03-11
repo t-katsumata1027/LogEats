@@ -140,8 +140,33 @@ export default async function Home() {
                 </div>
               </div>
 
-              {/* Feature 2: Progress Tracking Demo */}
+              {/* Feature 2: LINE Integration Demo */}
               <div className="flex flex-col md:flex-row-reverse items-center gap-10">
+                <div className="flex-1 space-y-4">
+                  <div className="text-4xl">📱</div>
+                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">LINEからいつものように写真を送るだけ</h4>
+                  <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
+                    LogEatsの公式LINEアカウントを友だち追加すれば、毎日の食事写真をLINEで送るだけでアプリに自動連携。わざわざブラウザを開く手間なくカロリー計算と記録が完了します。
+                  </p>
+                </div>
+                <div className="flex-1 w-full max-w-sm shrink-0 border border-sage-200 bg-[#abc1d1] rounded-2xl shadow-xl overflow-hidden p-4 space-y-3">
+                  <div className="text-center font-bold text-white text-xs mb-2">LogEats 公式</div>
+                  {/* Chat Mockup for LINE */}
+                  <div className="chat chat-end animate-[fade-in-up_2s_ease-out_infinite_alternate]">
+                    <div className="chat-bubble bg-[#85e04b] text-sage-800 text-sm shadow-md">🍔 ハンバーガーセット</div>
+                  </div>
+                  <div className="chat chat-start">
+                    <div className="chat-bubble bg-white text-sage-800 text-sm shadow-sm flex flex-col gap-1">
+                      <div className="text-xs font-bold">🍽️ 記録完了！</div>
+                      <div className="text-xs border-b border-sage-100 pb-1">カロリー: 650kcal<br/>タンパク質: 25.0g<br/>脂質: 30.0g<br/>炭水化物: 70.0g</div>
+                      <div className="text-xs text-blue-500 mt-1">✅ 記録を確認・修正する</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 3: Progress Tracking Demo */}
+              <div className="flex flex-col md:flex-row items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">📊</div>
                   <h4 className="text-2xl font-bold text-sage-800 tracking-tight">進捗がひと目でわかるダッシュボード</h4>
@@ -197,8 +222,8 @@ export default async function Home() {
                 </div>
               </div>
 
-              {/* Feature 3: Chat Correction Demo */}
-              <div className="flex flex-col md:flex-row items-center gap-10">
+              {/* Feature 4: Chat Correction Demo */}
+              <div className="flex flex-col md:flex-row-reverse items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">🪄</div>
                   <h4 className="text-2xl font-bold text-sage-800 tracking-tight">AIとチャット感覚で柔軟に補正</h4>
@@ -221,8 +246,8 @@ export default async function Home() {
                 </div>
               </div>
 
-              {/* Feature 4: Goals Auto Calc Demo */}
-              <div className="flex flex-col md:flex-row-reverse items-center gap-10">
+              {/* Feature 5: Goals Auto Calc Demo */}
+              <div className="flex flex-col md:flex-row items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">⚙️</div>
                   <h4 className="text-2xl font-bold text-sage-800 tracking-tight">身体情報から目標を自動計算</h4>
@@ -256,8 +281,8 @@ export default async function Home() {
                 </div>
               </div>
 
-              {/* Feature 5: History Graph Demo */}
-              <div className="flex flex-col md:flex-row items-center gap-10">
+              {/* Feature 6: History Graph Demo */}
+              <div className="flex flex-col md:flex-row-reverse items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">📈</div>
                   <h4 className="text-2xl font-bold text-sage-800 tracking-tight">過去の履歴をグラフで振り返り</h4>

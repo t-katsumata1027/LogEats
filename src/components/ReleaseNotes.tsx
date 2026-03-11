@@ -11,7 +11,22 @@ export function ReleaseNotes() {
                     <input type="radio" name="release-notes" defaultChecked />
                     <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
                         <span className="badge badge-success badge-sm text-white">New</span>
-                        <span>v1.4: まるでLINEのようなチャット記録UI ✨</span>
+                        <span>v1.5: LINE公式アカウントとの連携開始 🟢</span>
+                    </div>
+                    <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
+                        <p>LogEats公式LINEアカウントと連携できるようになりました！わざわざブラウザを開かなくても、いつものLINE画面から食事の写真を送るだけで直接記録できます。</p>
+                        <ul className="list-disc list-inside mt-2 space-y-1 ml-1 text-xs">
+                            <li>未連携の場合は、トップページの「LINEで始める / 連携する」からアカウント作成・連携が可能です。</li>
+                            <li>すでにログイン中の方は、設定画面の「外部サービス連携」から簡単に連携＆LINE友だち追加ができます。</li>
+                            <li>もちろんテキストでの記録にも対応。毎日の記録がさらにスムーズに！</li>
+                        </ul>
+                    </div>
+                </div>
+                <div className="collapse collapse-plus bg-white border border-sage-100 shadow-sm hover:shadow-md transition-shadow">
+                    <input type="radio" name="release-notes" />
+                    <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
+                        <span className="badge badge-neutral badge-sm text-white">v1.4</span>
+                        <span>まるでLINEのようなチャット記録UI ✨</span>
                     </div>
                     <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
                         <p>記録画面が大きく進化しました！AIアシスタントとのチャット形式で、自然なやり取りをしながら食事記録ができるようになりました。</p>

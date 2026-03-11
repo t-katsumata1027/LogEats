@@ -88,10 +88,9 @@ export async function POST(req: NextRequest) {
                         }
                     }
 
-                    // replyTokenは一度しか使えないため、ここで「分析中」メッセージを返す。最終結果はpushMessageで送る
                     await lineClient.replyMessage({
                         replyToken: event.replyToken,
-                        messages: [{ type: 'text', text: '🍽️ 写真を受け取ったよ！\nAIがカロリーを分析中だから数秒待ってね🔍' }]
+                        messages: [{ type: 'text', text: '🍽️ 写真を受け取ったよ！\nAIがカロリーを分析中だから数秒待ってね🔍\n(※連携していない場合は記録は保存されません)' }]
                     });
 
                     // 解析処理を実行
@@ -207,9 +206,9 @@ export async function POST(req: NextRequest) {
                             replyText += `\n⚠️ 写真が不鮮明で正しく分析できていない可能性があります`;
                         }
                         if (!userId) {
-                            replyText += `\n\n💡 LogEatsにサインインしてLINE連携を行うと、カレンダーに自動記録されます！\n👉 https://log-eats.com/`;
+                            replyText += `\n\n⚠️ 現在の分析結果は保存されていません。\n\n💡 LogEatsにサインインしてLINE連携を行うと、カレンダーに自動記録され、グラフで振り返りが可能になります！\n👉 早速アカウントを連携する: https://log-eats.com/`;
                         } else {
-                            replyText += `\n\n✅ 記録を確認する:\n👉 https://www.log-eats.com/dashboard`;
+                            replyText += `\n\n✅ 記録を確認・修正する:\n👉 https://www.log-eats.com/dashboard`;
                         }
 
                         if (event.source.userId) {
@@ -229,10 +228,14 @@ export async function POST(req: NextRequest) {
                         }
                     }
                 } else {
+                    const nonImageReply = userId 
+                        ? '食事の写真を送ってね📷✨ 自動でカロリーを計算して記録します！'
+                        : '食事の写真を送ってね📷✨ カロリーを計算するよ！\n\n💡 LogEatsにアカウント登録・LINE連携すると、日々の食事がグラフやカレンダーに自動で記録されてとっても便利です！\n👉 こちらから: https://log-eats.com/';
+                    
                     // 画像以外のメッセージ
                     await lineClient.replyMessage({
                         replyToken: event.replyToken,
-                        messages: [{ type: 'text', text: '食事の写真を送ってね📷✨ 自動でカロリーを計算して記録します！' }]
+                        messages: [{ type: 'text', text: nonImageReply }]
                     });
                 }
             }
