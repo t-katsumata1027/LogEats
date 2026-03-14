@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
     '/api/webhooks/(.*)',      // ClerkやLINEのWebhook用ルート
     '/terms',
     '/privacy',
+    '/news(.*)',               // お知らせ・記事ページ（AdSense用）
 ])
 
 export default clerkMiddleware(async (auth, request) => {
