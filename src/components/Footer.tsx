@@ -13,6 +13,7 @@ export function Footer() {
                     <span>AI-powered meal tracking</span>
                 </p>
                 <div className="flex justify-center gap-4 text-xs opacity-60">
+                    <Link href="/news" className="hover:text-white transition-colors">お知らせ / 記事</Link>
                     <Link href="/terms" className="hover:text-white transition-colors">利用規約</Link>
                     <Link href="/privacy" className="hover:text-white transition-colors">プライバシーポリシー</Link>
                     <a href="mailto:support@log-eats.com" className="hover:text-white transition-colors">お問い合わせ</a>
