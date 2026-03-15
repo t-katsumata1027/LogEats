@@ -8,6 +8,14 @@ import { WeeklyChartDemo } from "@/components/WeeklyChartDemo";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
 import { AdBanner } from "@/components/AdBanner";
 import { LineConnectModalButton } from "@/components/LineConnectModalButton";
+import { GoalCalculator } from "@/components/GoalCalculator";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Log-Eats | 写真を撮るだけのAI食事管理・カロリー計算アプリ",
+  description: "【無料】食事の写真をアップロードするだけでAIがカロリーとPFCバランス（タンパク質・脂質・炭水化物）を自動計算。LINE連携でさらに便利に。面倒な食事記録をスマートに自動化します。",
+  keywords: ["AI食事管理", "カロリー計算 アプリ", "PFCバランス 自動", "食事記録 写真", "ダイエット アプリ 無料", "Log-Eats"],
+};
 
 export default async function Home() {
   const { userId } = await auth();
@@ -35,17 +43,38 @@ export default async function Home() {
           {
             "@type": "HowToStep",
             "name": "食事の画像をアップロード",
-            "text": "スマートフォンで撮影した食事の写真をアップロード、またはテキストを入力します。"
+            "text": "スマートフォンで撮影した食事の写真をアップロード、または食べた内容をテキストで入力します。"
           },
           {
             "@type": "HowToStep",
-            "name": "AIが解析",
-            "text": "AIが解析し、カロリーとPFCバランスを自動計算します。"
+            "name": "AIが瞬時に解析",
+            "text": "独自AIが画像を解析し、概算のカロリーとPFCバランス（タンパク質、脂質、炭水化物）を数秒で算出します。"
           },
           {
             "@type": "HowToStep",
-            "name": "日々の進捗を確認",
-            "text": "ダッシュボードに保存され、日々の栄養バランスをグラフで確認できます。"
+            "name": "自動でグラフ化・保存",
+            "text": "解析結果はダッシュボードに自動保存され、日々の栄養バランスの推移をグラフで簡単に確認できます。"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "画像解析の精度はどのくらいですか？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "最新のAIモデルを使用しており、一般的な料理であれば高い精度で解析可能です。また、チャット形式で「ご飯を半分にした」などの修正も簡単に行えます。"
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "無料で使えますか？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "はい、基本的な食事記録とAI解析機能はすべて無料でご利用いただけます。"
+            }
           }
         ]
       }
@@ -59,8 +88,8 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="flex-1 flex flex-col w-full max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-4">
-        <SignedOut>
+      <div className={userId ? "flex-1 flex flex-col w-full max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-4 overflow-hidden" : "flex-1 flex flex-col w-full max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-4"}>
+        {!userId ? (
           <>
             {/* Hero Section */}
             <div className="text-center py-6 sm:py-10 mb-8 animate-fade-in-up">
@@ -109,15 +138,15 @@ export default async function Home() {
             {/* Features (Mockup Animations) */}
             <div className="mb-20 space-y-20">
               <div className="text-center">
-                <h3 className="text-3xl font-extrabold text-sage-800 mb-3 tracking-tight">Log-Eats の特徴機能</h3>
-                <p className="text-sage-500 text-sm sm:text-base mb-12">面倒な食事管理を、もっとラクに、楽しく。</p>
+                <h2 className="text-3xl font-extrabold text-sage-800 mb-3 tracking-tight">Log-Eats の特徴機能</h2>
+                <p className="text-sage-500 text-sm sm:text-base mb-12">AIを活用して、あなたの健康管理をもっと身近に、正確に。</p>
               </div>
 
               {/* Feature 1: AI Analysis Demo */}
               <div className="flex flex-col md:flex-row items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">📸</div>
-                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">写真やテキストから即座にAI解析</h4>
+                  <h3 className="text-2xl font-bold text-sage-800 tracking-tight">写真やテキストから即座にAI解析</h3>
                   <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
                     手入力の面倒な栄養素検索は不要。料理の写真をアップロードするか、食べた内容をテキストで打つだけで、AIが瞬時にカロリーとPFCを計算します。
                   </p>
@@ -144,10 +173,13 @@ export default async function Home() {
               <div className="flex flex-col md:flex-row-reverse items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">📱</div>
-                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">LINEからいつものように写真を送るだけ</h4>
+                  <h3 className="text-2xl font-bold text-sage-800 tracking-tight">LINEからいつものように写真を送るだけ</h3>
                   <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
                     LogEatsの公式LINEアカウントを友だち追加すれば、毎日の食事写真をLINEで送るだけでアプリに自動連携。わざわざブラウザを開く手間なくカロリー計算と記録が完了します。
                   </p>
+                  <div className="pt-2">
+                    <LineConnectModalButton />
+                  </div>
                 </div>
                 <div className="flex-1 w-full max-w-sm shrink-0 border border-sage-200 bg-[#abc1d1] rounded-2xl shadow-xl overflow-hidden p-4 space-y-3">
                   <div className="text-center font-bold text-white text-xs mb-2">LogEats 公式</div>
@@ -169,7 +201,7 @@ export default async function Home() {
               <div className="flex flex-col md:flex-row items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">📊</div>
-                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">進捗がひと目でわかるダッシュボード</h4>
+                  <h3 className="text-2xl font-bold text-sage-800 tracking-tight">進捗がひと目でわかるダッシュボード</h3>
                   <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
                     1日の目標に対するカロリーやPFCの達成度をプログレスバーで可視化。過去の履歴もカレンダーや週次グラフで振り返れるので、目標達成へのモチベーションが続きます。
                   </p>
@@ -226,7 +258,7 @@ export default async function Home() {
               <div className="flex flex-col md:flex-row-reverse items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">🪄</div>
-                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">AIとチャット感覚で柔軟に補正</h4>
+                  <h3 className="text-2xl font-bold text-sage-800 tracking-tight">AIとチャット感覚で柔軟に補正</h3>
                   <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
                     「ご飯は半分しか食べていない」「ドレッシングを変えた」など、あとから自然言語で修正指示を出すことで、より正確な記録が可能です。
                   </p>
@@ -246,38 +278,17 @@ export default async function Home() {
                 </div>
               </div>
 
-              {/* Feature 5: Goals Auto Calc Demo */}
+              {/* Feature 5: Goals Auto Calc (Interactive) */}
               <div className="flex flex-col md:flex-row items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">⚙️</div>
-                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">身体情報から目標を自動計算</h4>
+                  <h3 className="text-2xl font-bold text-sage-800 tracking-tight">身体情報から目標を自動計算</h3>
                   <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
                     年齢、身長、体重、普段の活動量を入力するだけで、あなたに最適な1日の目標カロリーとPFC（タンパク質・脂質・炭水化物）バランスをAIが自動計算します。
                   </p>
                 </div>
-                <div className="flex-1 w-full max-w-sm shrink-0 border border-sage-200 bg-white rounded-2xl shadow-xl overflow-hidden p-5">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-sage-100 pb-2">
-                      <span className="font-bold text-sage-800 text-sm">現在の体重</span>
-                      <span className="text-sm font-medium">65.0 kg</span>
-                    </div>
-                    <div className="flex items-center justify-between border-b border-sage-100 pb-2">
-                      <span className="font-bold text-sage-800 text-sm">目標体重</span>
-                      <span className="text-sm font-medium">60.0 kg</span>
-                    </div>
-                    <button className="btn btn-sm btn-block bg-sage-100 border-sage-300 text-sage-700 font-bold cursor-default hover:bg-sage-100">
-                      ✨ 身体情報から自動計算
-                    </button>
-                    <div className="bg-sage-50 p-4 rounded-xl border border-sage-100 text-center animate-[fade-in-up_2s_ease-out_infinite_alternate]">
-                      <div className="text-xs text-sage-600 font-bold mb-1">🔥 目標摂取カロリー</div>
-                      <div className="text-2xl font-extrabold text-sage-800">1,850 <span className="text-xs font-normal">kcal</span></div>
-                      <div className="flex justify-center gap-3 mt-3 text-xs font-bold bg-white p-2 rounded-lg border border-sage-100 shadow-sm">
-                        <span className="text-blue-600">P: 96g</span>
-                        <span className="text-purple-600">F: 51g</span>
-                        <span className="text-green-600">C: 250g</span>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex-1 w-full max-w-sm shrink-0">
+                  <GoalCalculator />
                 </div>
               </div>
 
@@ -285,7 +296,7 @@ export default async function Home() {
               <div className="flex flex-col md:flex-row-reverse items-center gap-10">
                 <div className="flex-1 space-y-4">
                   <div className="text-4xl">📈</div>
-                  <h4 className="text-2xl font-bold text-sage-800 tracking-tight">過去の履歴をグラフで振り返り</h4>
+                  <h3 className="text-2xl font-bold text-sage-800 tracking-tight">過去の履歴をグラフで振り返り</h3>
                   <p className="text-sage-600 leading-relaxed text-sm sm:text-base">
                     過去1週間の摂取カロリーと各栄養素の推移を折れ線グラフで表示。目標ライン（点線）との差分がひと目でわかり、振り返りが簡単になります。
                   </p>
@@ -306,17 +317,14 @@ export default async function Home() {
               </SignInButton>
             </div>
           </>
-        </SignedOut>
-        <SignedIn>
-          <div className="flex flex-col w-full pb-0 h-[calc(100dvh-153px)] sm:h-[calc(100dvh-97px)]">
+        ) : (
+          <div className="flex flex-col w-full pb-0 h-[calc(100dvh-130px)] sm:h-[calc(100dvh-97px)] -mx-4 sm:mx-0 min-w-[100vw] sm:min-w-0">
             <RecordingTabs isLoggedIn={true} />
           </div>
-        </SignedIn>
+        )}
       </div>
       {/* ② ホーム画面追加 固定バナー（スマホ向け） */}
-      <SignedOut>
-        <AddToHomeBanner />
-      </SignedOut>
+      {!userId && <AddToHomeBanner />}
     </main>
   );
 }

@@ -430,7 +430,7 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
     }
 
     return (
-        <div className="flex flex-col flex-1 w-full bg-[#F5F7F4] rounded-2xl border border-sage-200 shadow-inner overflow-hidden relative h-full">
+        <div className="flex flex-col flex-1 w-full bg-[#F5F7F4] sm:rounded-2xl sm:border border-sage-200 sm:shadow-inner overflow-hidden relative h-full">
 
             {/* Messages Area */}
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 pt-4 pb-2 flex flex-col">

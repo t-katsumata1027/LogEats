@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { ImageUpload } from "@/components/ImageUpload";
 import { NutritionResult } from "@/components/NutritionResult";
+import { NutritionSkeleton } from "@/components/NutritionSkeleton";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 
 export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
@@ -252,6 +253,10 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 >
                     {error}
                 </div>
+            )}
+
+            {(loading || isManualSubmitting) && !result && (
+                <NutritionSkeleton />
             )}
 
             {result && (

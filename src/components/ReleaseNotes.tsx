@@ -11,7 +11,23 @@ export function ReleaseNotes() {
                     <input type="radio" name="release-notes" defaultChecked />
                     <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
                         <span className="badge badge-success badge-sm text-white">New</span>
-                        <span>v1.5: LINE公式アカウントとの連携開始 🟢</span>
+                        <span>v1.6: チャット体験の向上と目標計算ツールの導入 🛠️</span>
+                    </div>
+                    <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
+                        <p>より使いやすく、より楽しく食事管理ができるよう、大幅なUI/UXアップデートを実施しました！</p>
+                        <ul className="list-disc list-inside mt-2 space-y-1 ml-1 text-xs">
+                            <li><strong>没入感のある記録画面</strong>: スマホ表示時にチャット領域を最大限に広げ、アプリのような使い心地を実現しました。</li>
+                            <li><strong>解析中のワクワク感を演出</strong>: AIが解析を行っている間、結果エリアに「スケルトン表示」を追加し、解析状況を視覚的に分かりやすくしました。</li>
+                            <li><strong>目標自動計算ツール</strong>: トップページに、身体情報から自分に最適なPFCバランスを即座に算出できるシミュレーターを設置しました。</li>
+                            <li><strong>SEO・表示の最適化</strong>: 検索からのアクセスのしやすさや、トップページの読みやすさを改善しました。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div className="collapse collapse-plus bg-white border border-sage-100 shadow-sm hover:shadow-md transition-shadow">
+                    <input type="radio" name="release-notes" />
+                    <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
+                        <span className="badge badge-neutral badge-sm text-white">v1.5</span>
+                        <span>LINE公式アカウントとの連携開始 🟢</span>
                     </div>
                     <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
                         <p>LogEats公式LINEアカウントと連携できるようになりました！わざわざブラウザを開かなくても、いつものLINE画面から食事の写真を送るだけで直接記録できます。</p>
