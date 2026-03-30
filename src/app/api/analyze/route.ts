@@ -16,30 +16,55 @@ import { put } from "@vercel/blob";
 import { sql } from "@vercel/postgres";
 import { logErrorAndNotify } from "@/lib/errorLogger";
 
-const PROMPT = `この写真に写っている料理・食品をすべて列挙し、JSONで返してください。
-コンビニエンスストアやスーパーの市販品（おにぎり、弁当、惣菜パッケージなど）が写っている場合は、パッケージの文字を読み取り、可能な限り正確な「メーカー名・ブランド名」や「具体的な商品名（例：セブンイレブンのふんわり玉子焼きと明太マヨネーズおにぎり）」を抽出して食品名としてください。
+const PROMPT = `あなたは食事解析の専門AIです。提供された画像から料理や食品を特定し、以下の手順で分析を行ってください。
+
+【分析ステップ】
+1. **画像全体の確認**: 何が写っているか、食事シーンか、それとも食品以外（薬など）かを判断します。
+2. **料理の特定**: 各お皿やパッケージを確認し、料理名、主な食材、調理法（焼く、揚げる、煮る等）を推測します。
+3. **分量の推計**: 器のサイズや比較対象から、一般的な基準（1人前、1杯、100g等）で分量を推計します。
+4. **市販品の識別**: コンビニやスーパーのラベル、ロゴがある場合は正確な商品名を読み取ります。
 
 【最重要ルール】
-薬、処方箋、書類、人物、風景など、食事や食品「以外」のものしか写っていない場合は、絶対に分析を行わず、foods を空配列 [] にしてください。薬や日用品を食品として登録しないでください。
+- 食事や食品「以外」のもの（薬、人物など）しか写っていない場合は、絶対に解析せず \`foods: []\` としてください。
+- 解析が困難なほど不鮮明、または複数人の食事が混在している場合は \`is_ambiguous: true\` とし、その理由を記載してください。
 
-フォーマットは必ず以下のJSONスキーマに従ってください:
+【出力例】
+- 定食の写真の場合:
+  {
+    "foods": [
+      { "name": "銀鮭の塩焼き", "amount": "1切れ" },
+      { "name": "白米", "amount": "茶碗1杯(約150g)" },
+      { "name": "味噌汁（わかめと豆腐）", "amount": "1杯" }
+    ],
+    "is_ambiguous": false
+  }
+- コンビニおにぎりの場合:
+  {
+    "foods": [{ "name": "セブンイレブン 手巻おにぎり 紀州南高梅", "amount": "1個" }],
+    "is_ambiguous": false
+  }
+
+【フォーマット】必ず以下のJSONスキーマに従ってください。
 { 
-  "foods": [{ "name": "食品名（日本語。市販品の場合はメーカー名や正確な商品名を含める）", "amount": "量の目安（例: 1杯、1枚、1個、1パック。不明な場合は省略可）" }],
-  "is_ambiguous": boolean, // 写真が遠い、複数人の食事が写っている、料理が一部しか写っていないなど不鮮明な場合にtrueにしてください
-  "reason": "is_ambiguousがtrueの場合の理由文（省略可）"
+  "foods": [{ "name": "食品名（日本語）", "amount": "量の目安" }],
+  "is_ambiguous": boolean,
+  "reason": "理由（必要な場合のみ）"
 }
 説明文やマークダウンは不要です。`;
 
 const NUTRITION_PROMPT = (foodName: string, amountStr?: string) =>
   `あなたは栄養学に精通した管理栄養士です。
-ユーザーから入力された食品・料理名「${foodName}」と目安量「${amountStr || "1食分"}」に基づき、日本食品標準成分表（八訂）等に準拠した妥当な数値を推定し、JSONフォーマットのみで返答してください。
+「${foodName}」（目安量: ${amountStr || "1食分"}）の栄養成分を、日本食品標準成分表（八訂）に基づき論理的に推計してください。
 
-【算出の厳密なルール】
-1. 一般的なレシピに基づく目安量の「推定重量（g）」を算出して \`estimated_weight_g\` に設定してください。
-2. その食品の「100gあたりの成分値（per_100g）」を、成分表に基づき厳密に出力してください。
-3. 日本人の食事摂取基準のPFCバランス（P:13-20%, F:20-30%, C:50-65%）を考慮し、極端な脂質超過や炭水化物不足など非現実的な数値にならないよう補正してください。
-4. 【重要】もし入力された食品名が「コンビニエンスストアの特定の商品」や「市販のパッケージ品」「外食チェーンの特定メニュー」であると判断できる場合（例：「〇〇のふんわり玉子焼きと明太マヨネーズおにぎり」「たんぱく質が摂れる！チキン＆たまご」など）は、一般的な推定値ではなく、あなたが持つウェブやデータベースの知識から**その商品の実際の正確なカロリーとPFC成分値、および内容量（重量）**を可能な限り検索・抽出し、それを数値として優先的に使用してください。
-5. 説明文やマークダウン（\`\`\`json 等）は一切含めず、純粋なJSONテキストのみを出力してください。
+【推計のガイドライン】
+1. **調理法と味付けの考慮**: 揚げ物の場合は吸油率（衣の種類等）を、煮物や炒め物の場合は一般的な調味料（砂糖、醤油、油等）の使用量を考慮に含めてください。
+2. **標準重量の参照**: 特記がない場合、以下の標準的な重量を参考にしてください。
+   - ご飯（茶碗1杯）: 150g
+   - 味噌汁（1杯）: 180-200g
+   - 鶏の唐揚げ（1個）: 30g
+   - トースト（6枚切り1枚）: 60g
+3. **市販品の優先**: 具体的な商品名の場合は、その商品の公表値を最優先してください。
+4. **PFCバランスの整合性**: 推計したカロリーと、PFC（タンパク質:4, 脂質:9, 炭水化物:4 kcal/g）の合計が矛盾しないようにしてください。
 
 【出力JSONスキーマ】
 {
@@ -51,7 +76,7 @@ const NUTRITION_PROMPT = (foodName: string, amountStr?: string) =>
     "carbs": 数値(g)
   }
 }
-`;
+純粋なJSONテキストのみを出力してください。`;
 
 function parseFoodListJson(content: string): { foods: { name: string; amount?: string }[], is_ambiguous?: boolean, reason?: string } {
   const jsonStr = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
@@ -127,7 +152,7 @@ export async function recognizeWithOpenAI(base64Image: string): Promise<{ foods:
   return parseFoodListJson(content);
 }
 
-/** Google Gemini で写っている料理・食品リストを取得（無料枠あり / Node.js非依存のためREST APIを使用） */
+/** Google Gemini で写っている料理・食品リストを取得 */
 export async function recognizeWithGemini(base64Image: string): Promise<{ foods: { name: string; amount?: string }[], is_ambiguous?: boolean, reason?: string }> {
   const apiKey = process.env.GEMINI_API_KEY ?? "";
   const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;

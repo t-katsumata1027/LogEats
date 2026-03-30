@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 const PROMPT_REANALYZE = (previousFoodsStr: string, userInstruction: string) => `
 あなたは栄養学に精通した管理栄養士です。
-以下の料理データ（前回解析結果）について、ユーザーから修正依頼がありました。
+ユーザーの写真解析結果を、特定の指示に基づいて「再計算・修正」してください。
 
 【前回の記録データ】
 ${previousFoodsStr}
@@ -16,17 +16,20 @@ ${previousFoodsStr}
 【ユーザーからの修正依頼】
 「${userInstruction}」
 
-ユーザーの指示に従い、各料理の内容や分量を修正し、日本食品標準成分表（八訂）等に準拠して数値（kcal, g）を再計算してください。
-・「少なめ」や「半分」と言われた場合は、その分カロリーやPFC（タンパク質・脂質・炭水化物）を適切に減算してください。
-・料理が変更・追加された場合は、一般的なレシピに基づきその数値を推定してください。
-・【重要】ユーザーが市販品やコンビニ商品などの「具体的な商品名」を指定してきた場合は、一般的な推定値ではなく、その商品の実際の正確な栄養成分値（カロリー・PFC）を知識ベースから検索・抽出し、それを計算に優先して使用してください。
-・指示に基づいて算出した最終的な数値を直接出力してください。
-・フォーマットは必ず以下のJSONスキーマに従ってください。説明文やマークダウンは不要です。
+【修正のステップ】
+1. **指示の解釈**: ユーザーが何を求めているか（量の増減、料理の間違い、情報の追加など）を正確に把握します。
+2. **論理的推論**: 指示に基づき、各食品の重量や栄養素がどのように変化すべきか推論します。
+   - 例: 「半分にした」→ カロリーおよび全PFCを50%にする。
+   - 例: 「野菜炒めに豚肉を追加」→ 豚肉分の栄養素を加算する。
+3. **PFCバランスの再計算**: 日本食品標準成分表（八訂）に基づき、修正後の最終数値を算出します。
+4. **市販品ルール**: ユーザーが具体的な商品名を挙げた場合は、その商品の正確な公表値（低糖質等の特性を含む）を優先してください。
+
+【フォーマット】必ず以下のJSONスキーマに従ってください。
 {
   "foods": [
     {
       "name": "食品名",
-      "amount": "分量の目安（書き換えられた量。例: 半分、少なめ）",
+      "amount": "分量の目安（書き換えられた量）",
       "calories": 数値(kcal),
       "protein": 数値(g),
       "fat": 数値(g),
@@ -34,7 +37,7 @@ ${previousFoodsStr}
     }
   ]
 }
-`;
+説明文やマークダウンは不要です。`;
 
 function parseReanalyzedListJson(content: string): AnalyzedFood[] {
     const jsonStr = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
@@ -90,7 +93,7 @@ export async function POST(
 
         if (useGemini) {
             const apiKey = process.env.GEMINI_API_KEY ?? "";
-            const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+            const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
             const res = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
