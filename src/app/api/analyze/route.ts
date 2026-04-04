@@ -288,6 +288,15 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
+function generateShortId(length = 8) {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 export async function POST(request: NextRequest) {
   const useGemini = !!process.env.GEMINI_API_KEY;
   const useOpenAI = !!process.env.OPENAI_API_KEY;
@@ -376,80 +385,87 @@ export async function POST(request: NextRequest) {
 
     const summary = buildSummary(foods);
 
-    // --- Phase 2: ログイン中ユーザーなら画像をBlobへアップロードしDBに記録する ---
+    // --- Phase 2: 画像をBlobへアップロードしDBに記録する ---
     const userId = await getDbUserId();
     let imageUrl = null;
     let savedLogId = null;
+    let shareId = null;
 
-    if (userId) {
-      // 1. 画像をVercel Blobへアップロード (public access)
-      try {
-        const ext = image.name?.split('.').pop() || 'jpg';
-        const blobFilename = `meals/${userId}_${Date.now()}.${ext}`;
-        const blobResult = await put(blobFilename, image, { access: 'public' });
-        imageUrl = blobResult.url;
-      } catch (e) {
-        console.error("Vercel Blob Upload Error:", e);
-        // 画像保存に失敗しても解析結果自体は返せるように続行
+    // 1. 画像をVercel Blobへアップロード (public access)
+    try {
+      const ext = image.name?.split('.').pop() || 'jpg';
+      const blobFilename = `meals/${userId || 'guest'}_${Date.now()}.${ext}`;
+      const blobResult = await put(blobFilename, image, { access: 'public' });
+      imageUrl = blobResult.url;
+    } catch (e) {
+      console.error("Vercel Blob Upload Error:", e);
+      // 画像保存に失敗しても解析結果自体は返せるように続行
+    }
+
+    // 2. Postgres の meal_logs に記録を保存
+    try {
+      const mealType = (formData.get("meal_type") as string) || "other";
+      const validMealTypes = ["breakfast", "lunch", "dinner", "snack", "other"];
+      const safeMealType = validMealTypes.includes(mealType) ? mealType : "other";
+
+      // Parse logged_at if provided
+      const loggedAtRaw = formData.get("logged_at") as string | null;
+      let loggedAtValue: string | null = null;
+      if (loggedAtRaw) {
+        const parsed = new Date(loggedAtRaw);
+        if (!isNaN(parsed.getTime())) {
+          loggedAtValue = parsed.toISOString();
+        }
       }
 
-      // 2. Postgres の meal_logs に記録を保存
-      try {
-        const mealType = (formData.get("meal_type") as string) || "other";
-        const validMealTypes = ["breakfast", "lunch", "dinner", "snack", "other"];
-        const safeMealType = validMealTypes.includes(mealType) ? mealType : "other";
-
-        // Parse logged_at if provided
-        const loggedAtRaw = formData.get("logged_at") as string | null;
-        let loggedAtValue: string | null = null;
-        if (loggedAtRaw) {
-          const parsed = new Date(loggedAtRaw);
-          if (!isNaN(parsed.getTime())) {
-            loggedAtValue = parsed.toISOString();
-          }
-        }
-
-        const { rows } = loggedAtValue
-          ? await sql`
-            INSERT INTO meal_logs (
-              user_id, image_url, total_calories, total_protein, 
-              total_fat, total_carbs, analyzed_data, meal_type, logged_at
-            ) VALUES (
-              ${userId}, 
-              ${imageUrl}, 
-              ${summary.totalCalories}, 
-              ${summary.totalProtein}, 
-              ${summary.totalFat}, 
-              ${summary.totalCarbs}, 
-              ${JSON.stringify({ foods })},
-              ${safeMealType},
-              ${loggedAtValue}
-            )
-            RETURNING id;
-          `
-          : await sql`
-            INSERT INTO meal_logs (
-              user_id, image_url, total_calories, total_protein, 
-              total_fat, total_carbs, analyzed_data, meal_type
-            ) VALUES (
-              ${userId}, 
-              ${imageUrl}, 
-              ${summary.totalCalories}, 
-              ${summary.totalProtein}, 
-              ${summary.totalFat}, 
-              ${summary.totalCarbs}, 
-              ${JSON.stringify({ foods })},
-              ${safeMealType}
-            )
-            RETURNING id;
-          `;
-        if (rows.length > 0) {
-          savedLogId = rows[0].id;
-        }
-      } catch (e) {
-        console.error("Database Insert Error:", e);
+      const shortIdValue = generateShortId();
+      const { rows } = loggedAtValue
+        ? await sql`
+          INSERT INTO meal_logs (
+            user_id, image_url, total_calories, total_protein, 
+            total_fat, total_carbs, analyzed_data, meal_type, logged_at, short_id
+          ) VALUES (
+            ${userId}, 
+            ${imageUrl}, 
+            ${summary.totalCalories}, 
+            ${summary.totalProtein}, 
+            ${summary.totalFat}, 
+            ${summary.totalCarbs}, 
+            ${JSON.stringify({ foods })},
+            ${safeMealType},
+            ${loggedAtValue},
+            ${shortIdValue}
+          )
+          RETURNING id, share_id, short_id;
+        `
+        : await sql`
+          INSERT INTO meal_logs (
+            user_id, image_url, total_calories, total_protein, 
+            total_fat, total_carbs, analyzed_data, meal_type, short_id
+          ) VALUES (
+            ${userId}, 
+            ${imageUrl}, 
+            ${summary.totalCalories}, 
+            ${summary.totalProtein}, 
+            ${summary.totalFat}, 
+            ${summary.totalCarbs}, 
+            ${JSON.stringify({ foods })},
+            ${safeMealType},
+            ${shortIdValue}
+          )
+          RETURNING id, share_id, short_id;
+        `;
+      if (rows.length > 0) {
+        savedLogId = rows[0].id;
+        shareId = rows[0].share_id;
+        const short_id = rows[0].short_id;
+        return NextResponse.json({ foods, summary, savedLogId, shareId, short_id, is_ambiguous });
       }
-    } else {
+    } catch (e) {
+      console.error("Database Insert Error:", e);
+    }
+
+    if (!userId) {
       // 未ログイン状態の場合は analyze API の利用ログを記録
       try {
         await sql`
@@ -461,7 +477,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ foods, summary, savedLogId, is_ambiguous });
+    return NextResponse.json({ foods, summary, savedLogId, shareId, is_ambiguous });
   } catch (e) {
     console.error("=== API Analysis Error ===", e);
     const err = e as { status?: number; message?: string; name?: string; stack?: string };

@@ -38,6 +38,15 @@ function parseJson(content: string) {
   }
 }
 
+function generateShortId(length = 8) {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 function parseNutritionJson(content: string): FoodMasterRecord | null {
   const o = parseJson(content);
   if (!o) return null;
@@ -296,45 +305,49 @@ export async function POST(request: NextRequest) {
           : "other";
 
     // Step 3: DB に保存 (ログイン時のみ)
-    let savedLogId = null;
-    if (!isGuest) {
-      const { rows } = loggedAtValue
-        ? await sql`
-            INSERT INTO meal_logs (
-              user_id, image_url, total_calories, total_protein,
-              total_fat, total_carbs, analyzed_data, meal_type, logged_at
-            ) VALUES (
-              ${userId},
-              NULL,
-              ${totalCalories},
-              ${totalProtein},
-              ${totalFat},
-              ${totalCarbs},
-              ${JSON.stringify({ foods, original_text: text })},
-              ${safeMealType},
-              ${loggedAtValue}
-            )
-            RETURNING id;
-          `
-        : await sql`
-            INSERT INTO meal_logs (
-              user_id, image_url, total_calories, total_protein,
-              total_fat, total_carbs, analyzed_data, meal_type
-            ) VALUES (
-              ${userId},
-              NULL,
-              ${totalCalories},
-              ${totalProtein},
-              ${totalFat},
-              ${totalCarbs},
-              ${JSON.stringify({ foods, original_text: text })},
-              ${safeMealType}
-            )
-            RETURNING id;
-          `;
+    const shortIdValue = generateShortId();
+    const { rows } = loggedAtValue
+      ? await sql`
+          INSERT INTO meal_logs (
+            user_id, image_url, total_calories, total_protein,
+            total_fat, total_carbs, analyzed_data, meal_type, logged_at, short_id
+          ) VALUES (
+            ${userId},
+            NULL,
+            ${totalCalories},
+            ${totalProtein},
+            ${totalFat},
+            ${totalCarbs},
+            ${JSON.stringify({ foods, original_text: text })},
+            ${safeMealType},
+            ${loggedAtValue},
+            ${shortIdValue}
+          )
+          RETURNING id, share_id, short_id;
+        `
+      : await sql`
+          INSERT INTO meal_logs (
+            user_id, image_url, total_calories, total_protein,
+            total_fat, total_carbs, analyzed_data, meal_type, short_id
+          ) VALUES (
+            ${userId},
+            NULL,
+            ${totalCalories},
+            ${totalProtein},
+            ${totalFat},
+            ${totalCarbs},
+            ${JSON.stringify({ foods, original_text: text })},
+            ${safeMealType},
+            ${shortIdValue}
+          )
+          RETURNING id, share_id, short_id;
+        `;
 
-      savedLogId = rows[0]?.id ?? null;
-    } else {
+    const savedLogId = rows[0]?.id ?? null;
+    const shareId = rows[0]?.share_id ?? null;
+    const shortId = rows[0]?.short_id ?? null;
+
+    if (!userId) {
       // 未ログイン状態の場合はアクセスログのみ記録
       try {
         await sql`
@@ -349,6 +362,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       savedLogId,
+      share_id: shareId,
+      short_id: shortId,
       foods,
       totalCalories,
       totalProtein,

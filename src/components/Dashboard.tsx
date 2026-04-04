@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
+import { ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
 import { WeeklyChart } from "@/components/WeeklyChart";
 import { AdBanner } from "@/components/AdBanner";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 
 type MealLog = {
     id: number;
+    share_id?: string;
+    short_id?: string;
     image_url: string;
     meal_type: string;
     total_calories: number;
@@ -49,6 +52,7 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
     // --- モーダル・詳細編集用のState ---
     const [selectedLog, setSelectedLog] = useState<MealLog | null>(null);
+    const [copiedShareId, setCopiedShareId] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editValues, setEditValues] = useState({
         total_calories: 0,
@@ -237,6 +241,51 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             alert(err instanceof Error ? err.message : "エラーが発生しました");
         } finally {
             setIsReanalyzing(false);
+        }
+    };
+
+    const handleShareModal = (shareId: string | undefined, shortId?: string | null) => {
+        if (!shareId) return;
+        const shareUrl = shortId
+            ? `${window.location.origin}/s/${shortId}`
+            : `${window.location.origin}/share/${shareId}`;
+
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            setCopiedShareId(shareId);
+            setTimeout(() => setCopiedShareId(null), 2000);
+        });
+    };
+
+    const handleShareX = (log: MealLog) => {
+        if (!log.share_id) return;
+        const shareUrl = log.short_id
+            ? `${window.location.origin}/s/${log.short_id}`
+            : `${window.location.origin}/share/${log.share_id}`;
+        
+        const shareText = `今日の食事解析結果 🔥\n${Math.round(log.total_calories)}kcal (P:${Math.round(log.total_protein)}g F:${Math.round(log.total_fat)}g C:${Math.round(log.total_carbs)}g)\n#AI食事解析 #LogEats @EatsLog88161`;
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+        window.open(twitterUrl, "_blank");
+    };
+
+    const handleShareDailyX = async () => {
+        try {
+            const dateStr = selectedDate.toISOString().split('T')[0];
+            const res = await fetch('/api/shares/daily', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: dateStr })
+            });
+            const { share_id, short_id } = await res.json();
+            
+            const shareUrl = `${window.location.origin}/s/${short_id}`;
+            const dateText = selectedDate.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
+            const shareText = `${dateText} の食事まとめ 🔥\n合計: ${Math.round(selectedTotal)}kcal (P:${Math.round(selectedProtein)}g F:${Math.round(selectedFat)}g C:${Math.round(selectedCarbs)}g)\n#AI食事解析 #LogEats @EatsLog88161`;
+            
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+            window.open(twitterUrl, "_blank");
+        } catch (err) {
+            console.error("Daily share failed:", err);
+            alert("シェアに失敗しました");
         }
     };
 
@@ -471,15 +520,16 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     }
 
     return (
-        <div className="py-2">
+        <div className="py-2 w-full">
             <h2 className="text-xl font-semibold text-sage-800 mb-6 flex items-center gap-2">
                 <span>📊</span> あなたの食事記録
             </h2>
 
             {/* ----- 週次グラフ ----- */}
-            <div className="mb-8">
+            <div className="mb-8 w-full">
                 <WeeklyChart
                     logs={logs}
+                    baseDate={selectedDate}
                     targetCalories={targetCalories}
                     targetProtein={targetProtein}
                     targetFat={targetFat}
@@ -488,11 +538,19 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             </div>
 
             {/* ----- カレンダー ----- */}
-            <div className="mb-8 card bg-base-100 border border-sage-100 shadow-sm p-4">
+            <div className="mb-8 card w-full bg-base-100 border border-sage-100 shadow-sm p-4">
                 <div className="flex justify-between items-center mb-4 px-2">
-                    <h3 className="text-sm font-bold text-sage-800">
-                        {selectedDate.toLocaleDateString([], { year: 'numeric', month: 'short' })}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-sage-800">
+                            {selectedDate.toLocaleDateString([], { year: 'numeric', month: 'short' })}
+                        </h3>
+                        <button
+                            onClick={() => setSelectedDate(new Date())}
+                            className="bg-sage-100/50 hover:bg-sage-200/50 text-sage-600 px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors border border-sage-200/50"
+                        >
+                            今日
+                        </button>
+                    </div>
 
                     <div className="bg-sage-100/50 p-1 rounded-lg flex items-center gap-1">
                         <button
@@ -512,37 +570,63 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
                 {!isCalendarExpanded ? (
                     /* 週表示ストリップ */
-                    <div className="flex justify-between items-center px-1 sm:px-4">
-                        {weekDays.map((date, i) => {
-                            const isSelected = date.toLocaleDateString() === selectedDate.toLocaleDateString();
-                            const isToday = date.toLocaleDateString() === new Date().toLocaleDateString();
-                            const hasLog = loggedDates.some(ld => ld.toLocaleDateString() === date.toLocaleDateString());
-                            const isStar = starDates.some(sd => sd.toLocaleDateString() === date.toLocaleDateString());
-                            const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
+                    <div className="w-full flex items-center gap-1 sm:gap-2 px-1">
+                        <button
+                            onClick={() => {
+                                const d = new Date(selectedDate);
+                                d.setDate(d.getDate() - 7);
+                                setSelectedDate(d);
+                            }}
+                            className="p-1 sm:p-2 rounded-full hover:bg-sage-100 text-sage-400 hover:text-sage-700 transition-colors shrink-0"
+                            aria-label="前週"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
 
-                            return (
-                                <button
-                                    key={i}
-                                    onClick={() => setSelectedDate(date)}
-                                    className={`relative flex flex-col items-center justify-center p-2 rounded-xl w-10 sm:w-12 transition-colors ${isSelected
-                                        ? 'bg-sage-600 text-white shadow-md'
-                                        : isToday
-                                            ? 'bg-sage-100 text-sage-900 border border-sage-200'
-                                            : 'text-sage-600 hover:bg-sage-50'
-                                        }`}
-                                >
-                                    {isStar && (
-                                        <span className="absolute -top-1 -right-1 text-[10px] leading-none pointer-events-none">⭐</span>
-                                    )}
-                                    <span className={`text-[10px] font-medium mb-1 ${isSelected ? 'text-sage-100' : 'text-sage-400'}`}>
-                                        {dayNames[i]}
-                                    </span>
-                                    <span className={`text-base font-bold pb-0.5 ${hasLog && !isSelected ? 'underline decoration-sage-400 decoration-2 underline-offset-4' : ''}`}>
-                                        {date.getDate()}
-                                    </span>
-                                </button>
-                            );
-                        })}
+                        <div className="flex-1 grid grid-cols-7 gap-1 items-center">
+                            {weekDays.map((date, i) => {
+                                const isSelected = date.toLocaleDateString() === selectedDate.toLocaleDateString();
+                                const isToday = date.toLocaleDateString() === new Date().toLocaleDateString();
+                                const hasLog = loggedDates.some(ld => ld.toLocaleDateString() === date.toLocaleDateString());
+                                const isStar = starDates.some(sd => sd.toLocaleDateString() === date.toLocaleDateString());
+                                const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
+
+                                return (
+                                    <button
+                                        key={i}
+                                        onClick={() => setSelectedDate(date)}
+                                        className={`relative flex flex-col items-center justify-center p-2 rounded-xl w-full transition-colors ${isSelected
+                                            ? 'bg-sage-600 text-white shadow-md'
+                                            : isToday
+                                                ? 'bg-sage-100 text-sage-900 border border-sage-200'
+                                                : 'text-sage-600 hover:bg-sage-50'
+                                            }`}
+                                    >
+                                        {isStar && (
+                                            <span className="absolute -top-1 -right-1 text-[10px] leading-none pointer-events-none">⭐</span>
+                                        )}
+                                        <span className={`text-[10px] font-medium mb-1 ${isSelected ? 'text-sage-100' : 'text-sage-400'}`}>
+                                            {dayNames[i]}
+                                        </span>
+                                        <span className={`text-base font-bold pb-0.5 ${hasLog && !isSelected ? 'underline decoration-sage-400 decoration-2 underline-offset-4' : ''}`}>
+                                            {date.getDate()}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                const d = new Date(selectedDate);
+                                d.setDate(d.getDate() + 7);
+                                setSelectedDate(d);
+                            }}
+                            className="p-1 sm:p-2 rounded-full hover:bg-sage-100 text-sage-400 hover:text-sage-700 transition-colors shrink-0"
+                            aria-label="次週"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
                     </div>
                 ) : (
                     /* react-day-picker (月表示) */
@@ -572,14 +656,26 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     {error}
                 </div>
             ) : (
-                <div className="space-y-8">
+                <div className="space-y-8 w-full">
                     {/* ----- サマリーパネル ----- */}
-                    <div className="card bg-base-100 shadow-sm border border-sage-100 p-6 space-y-5">
+                    <div className="card w-full bg-base-100 shadow-sm border border-sage-100 p-6 space-y-5">
                         {/* カロリー行 */}
                         <div>
-                            <p className="text-sage-600 text-sm font-medium mb-1">
-                                {filterDateStr === new Date().toLocaleDateString() ? "今日" : selectedDate.toLocaleDateString([], { month: "short", day: "numeric" })}摂取したカロリー
-                            </p>
+                            <div className="flex items-center justify-between mb-1">
+                                <p className="text-sage-600 text-sm font-medium">
+                                    {filterDateStr === new Date().toLocaleDateString() ? "今日" : selectedDate.toLocaleDateString([], { month: "short", day: "numeric" })}摂取したカロリー
+                                </p>
+                                <button
+                                    onClick={handleShareDailyX}
+                                    className="btn btn-xs h-7 min-h-0 px-3 rounded-full flex items-center gap-1.5 transition-all bg-black text-white hover:bg-gray-800 border-none shadow-sm"
+                                    title="1日のまとめをXでシェア"
+                                >
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-2.5 w-2.5 fill-current">
+                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+                                    </svg>
+                                    <span className="text-[9px] font-bold">1日のまとめをXでシェア</span>
+                                </button>
+                            </div>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-4xl font-bold tracking-tight ${targetCalories && selectedTotal > targetCalories ? 'text-red-500' : 'text-sage-900'}`}>
                                     {Math.round(selectedTotal).toLocaleString()}
@@ -875,30 +971,58 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
                             {/* コンテンツ部分 */}
                             <div className="p-5 overflow-y-auto">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="inline-flex items-center text-xs font-semibold px-2 py-1 rounded-full bg-sage-100 text-sage-800">
-                                            🕒 {new Date(selectedLog.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                        <span className="text-xs text-sage-500">
+                                <div className="flex flex-wrap items-center justify-between gap-3 mb-4 border-b border-sage-100 pb-4">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <div className="flex items-center gap-1.5 bg-sage-100 text-sage-800 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap">
+                                            <span>🕒</span>
+                                            {new Date(selectedLog.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                        <div className="text-[10px] text-sage-500 font-medium px-1">
                                             {new Date(selectedLog.logged_at).toLocaleDateString()}
-                                        </span>
-                                        <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-sage-50 border border-sage-200 text-sage-700">
+                                        </div>
+                                        <div className="bg-sage-50 border border-sage-200 text-sage-700 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap">
                                             {MEAL_TYPE_LABELS[selectedLog.meal_type] || "📝 その他"}
-                                        </span>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex items-center gap-2">
+                                        {!isEditing && selectedLog.share_id && (
+                                            <div className="flex items-center gap-1.5 bg-sage-50/50 p-1 rounded-full border border-sage-100">
+                                                <button
+                                                    onClick={() => handleShareX(selectedLog)}
+                                                    className="btn btn-xs h-7 min-h-0 px-2.5 rounded-full flex items-center gap-1 transition-all bg-black text-white hover:bg-gray-800 border-none"
+                                                    title="Xでシェア"
+                                                >
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-2.5 w-2.5 fill-current">
+                                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+                                                    </svg>
+                                                    <span className="text-[9px] font-bold">Xシェア</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleShareModal(selectedLog.share_id, selectedLog.short_id)}
+                                                    className={`btn btn-xs h-7 min-h-0 px-2.5 rounded-full flex items-center gap-1 transition-all border-none ${copiedShareId === selectedLog.share_id
+                                                        ? 'bg-green-500 text-white hover:bg-green-600'
+                                                        : 'bg-white text-sage-600 hover:bg-sage-50 border-sage-200 shadow-sm'
+                                                        }`}
+                                                >
+                                                    {copiedShareId === selectedLog.share_id ? (
+                                                        <><Check size={10} strokeWidth={3} /> <span className="text-[9px] font-bold">完了</span></>
+                                                    ) : (
+                                                        <><Copy size={10} /> <span className="text-[9px] font-bold">コピー</span></>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        )}
                                         {!isEditing && (
-                                            <>
-                                                <button onClick={() => setIsEditing(true)} className="btn btn-sm btn-circle btn-ghost bg-sage-50 text-sage-700 hover:bg-sage-100" title="数値を編集">
+                                            <div className="flex items-center gap-1">
+                                                <button onClick={() => setIsEditing(true)} className="btn btn-xs btn-circle bg-white text-sage-600 border-sage-200 hover:bg-sage-50 shadow-sm" title="数値を編集">
                                                     ✏️
                                                 </button>
-                                                <button onClick={() => handleDelete(selectedLog.id)} disabled={isSaving} className="btn btn-sm btn-circle btn-ghost bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600" title="この記録を削除">
+                                                <button onClick={() => handleDelete(selectedLog.id)} disabled={isSaving} className="btn btn-xs btn-circle bg-white text-red-500 border-red-100 hover:bg-red-50 shadow-sm" title="この記録を削除">
                                                     🗑️
                                                 </button>
-                                            </>
+                                            </div>
                                         )}
-                                        <button type="button" onClick={closeModal} className="btn btn-sm btn-circle btn-ghost bg-sage-50 text-sage-700 hover:bg-sage-100">
+                                        <button type="button" onClick={closeModal} className="btn btn-xs btn-circle bg-sage-100 text-sage-600 hover:bg-sage-200 border-none ml-1">
                                             ✕
                                         </button>
                                     </div>

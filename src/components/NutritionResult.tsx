@@ -1,12 +1,16 @@
 "use client";
 
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
+import { Share2, Copy, Check } from "lucide-react";
+import { useState } from "react";
 
 interface NutritionResultProps {
   foods: AnalyzedFood[];
   summary: NutritionSummary;
   isAmbiguous?: boolean;
   isLoggedIn?: boolean;
+  share_id?: string;
+  short_id?: string;
 }
 
 function SummaryCard({ summary }: { summary: NutritionSummary }) {
@@ -36,7 +40,25 @@ function SummaryCard({ summary }: { summary: NutritionSummary }) {
   );
 }
 
-export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn }: NutritionResultProps) {
+export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn, share_id, short_id }: NutritionResultProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const id = short_id || share_id;
+    if (!id) return;
+    
+    // short_id がある場合は /s/ 形式、なければ /share/ 形式
+    const path = short_id ? `/s/${short_id}` : `/share/${share_id}`;
+    const shareUrl = `${window.location.origin}${path}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
+
   return (
     <section className="mt-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -56,6 +78,41 @@ export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn }: Nut
       )}
 
       <SummaryCard summary={summary} />
+
+      {share_id && (
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const id = short_id || share_id;
+                const path = short_id ? `/s/${short_id}` : `/share/${share_id}`;
+                const shareUrl = `${window.location.origin}${path}`;
+                const shareText = `今日の食事解析結果 🔥\n${Math.round(summary.totalCalories)}kcal (P:${Math.round(summary.totalProtein)}g F:${Math.round(summary.totalFat)}g C:${Math.round(summary.totalCarbs)}g)\n#AI食事解析 #LogEats @EatsLog88161`;
+                const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+                window.open(twitterUrl, "_blank");
+              }}
+              className="btn flex-1 bg-black text-white hover:bg-gray-900 border-none shadow-md flex items-center justify-center gap-2 py-4 h-auto rounded-2xl transition-all transform active:scale-95"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+              </svg>
+              <span className="font-bold whitespace-nowrap">Xでシェア</span>
+            </button>
+
+            <button
+              onClick={handleCopy}
+              className={`btn px-6 border border-sage-200 shadow-sm flex items-center justify-center gap-2 py-4 h-auto rounded-2xl transition-all transform active:scale-95 ${copied ? "bg-sage-100 border-sage-300 text-sage-700" : "bg-white text-sage-600 hover:bg-sage-50"
+                }`}
+            >
+              {copied ? <Check size={20} className="text-green-600" /> : <Copy size={20} />}
+              <span className="font-bold whitespace-nowrap">{copied ? "コピー済" : "URLコピー"}</span>
+            </button>
+          </div>
+          <p className="text-[10px] text-sage-400 text-center">
+            ※ シェアまたはURLを共有すると、この食事内容が公開されます
+          </p>
+        </div>
+      )}
 
       <div>
         <h3 className="text-sm font-medium text-sage-700 mb-2 mt-4 sm:mt-0">検出した料理・食品</h3>

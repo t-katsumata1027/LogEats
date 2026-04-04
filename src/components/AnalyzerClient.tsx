@@ -21,6 +21,8 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
         foods: AnalyzedFood[];
         summary: NutritionSummary;
         savedLogId?: number;
+        share_id?: string;
+        short_id?: string;
         isAmbiguous?: boolean;
     } | null>(null);
 
@@ -53,6 +55,8 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 foods: data.foods,
                 summary: data.summary,
                 savedLogId: data.savedLogId,
+                share_id: data.share_id,
+                short_id: data.short_id,
                 isAmbiguous: data.is_ambiguous
             });
         } catch (e) {
@@ -112,6 +116,8 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                     totalCarbs: data.totalCarbs
                 },
                 savedLogId: data.savedLogId,
+                share_id: data.share_id,
+                short_id: data.short_id,
                 isAmbiguous: false // Text is explicit, not ambiguous
             });
             // We do not clear manualText here so the user can see what they analyzed
@@ -265,6 +271,8 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                     summary={result.summary}
                     isAmbiguous={result.isAmbiguous}
                     isLoggedIn={isLoggedIn}
+                    share_id={result.share_id}
+                    short_id={result.short_id}
                 />
             )}
 

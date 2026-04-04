@@ -22,6 +22,8 @@ export async function GET(request: NextRequest) {
     const { rows: logsRows } = await sql`
       SELECT 
         id, 
+        share_id,
+        short_id,
         image_url, 
         meal_type, 
         total_calories, 

@@ -15,6 +15,7 @@ type MealLog = {
 
 type Props = {
     logs: MealLog[];
+    baseDate?: Date;
     targetCalories: number | null;
     targetProtein: number | null;
     targetFat: number | null;
@@ -23,18 +24,23 @@ type Props = {
 
 const DAY_NAMES = ["日", "月", "火", "水", "木", "金", "土"];
 
-/** 直近7日間（今日含む）の日付配列を生成 */
-function getLast7Days(): Date[] {
-    return Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        d.setHours(0, 0, 0, 0);
+/** 指定された日付を含む週（月曜〜日曜）を生成 */
+function getWeekDays(baseDate: Date): Date[] {
+    const current = new Date(baseDate);
+    const day = current.getDay();
+    const diff = current.getDate() - day + (day === 0 ? -6 : 1); // 月曜始まり
+    const monday = new Date(current.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+
+    return Array.from({ length: 7 }).map((_, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
         return d;
     });
 }
 
-export function WeeklyChart({ logs, targetCalories, targetProtein, targetFat, targetCarbs }: Props) {
-    const days = getLast7Days();
+export function WeeklyChart({ logs, baseDate = new Date(), targetCalories, targetProtein, targetFat, targetCarbs }: Props) {
+    const days = getWeekDays(baseDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -63,7 +69,7 @@ export function WeeklyChart({ logs, targetCalories, targetProtein, targetFat, ta
     return (
         <div className="card bg-base-100 border border-sage-100 shadow-sm p-4">
             <h3 className="text-sm font-bold text-sage-800 mb-4 flex items-center gap-2">
-                <span>📈</span> 過去7日間の栄養推移
+                <span>📈</span> 週間の栄養推移
             </h3>
 
             {!hasAnyData ? (

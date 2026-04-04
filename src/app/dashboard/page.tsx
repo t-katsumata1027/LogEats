@@ -9,7 +9,7 @@ export default async function DashboardPage() {
 
     return (
         <main className="min-h-screen flex flex-col">
-            <div className="max-w-2xl mx-auto px-4 py-6">
+            <div className="w-full max-w-2xl mx-auto px-4 py-6">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-sage-800 tracking-tight">
                         食事の履歴
