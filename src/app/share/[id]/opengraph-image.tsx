@@ -3,8 +3,8 @@ import { sql } from "@vercel/postgres";
 
 export const runtime = 'edge';
 
-export default async function Image({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function Image({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   // URLにテキストが混入した場合を考慮し、最初のUUID部分(36文字)のみを抽出
   const uuid = id.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0] || id;
 

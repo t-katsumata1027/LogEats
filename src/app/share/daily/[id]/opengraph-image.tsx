@@ -3,8 +3,8 @@ import { sql } from "@vercel/postgres";
 
 export const runtime = 'edge';
 
-export default async function Image({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function Image({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   
   // share_id からデータを取得
   const { rows: shareRows } = await sql`
