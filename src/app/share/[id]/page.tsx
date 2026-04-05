@@ -33,6 +33,9 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
 
   const title = `今日の食事解析結果 - LogEats`;
   const description = `${log.total_calories}kcal | P:${log.total_protein}g F:${log.total_fat}g C:${log.total_carbs}g | AIが写真を一瞬で解析しました。`;
+  
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
+  const ogImageUrl = `${baseUrl}/share/${id}/opengraph-image`;
 
   return {
     title,
@@ -43,7 +46,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
       type: "website",
       images: [
         {
-          url: `/share/${id}/opengraph-image`,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
           alt: "食事解析レポート",
@@ -54,7 +57,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
       card: "summary_large_image",
       title,
       description,
-      images: [`/share/${id}/opengraph-image`],
+      images: [ogImageUrl],
     },
   };
 }

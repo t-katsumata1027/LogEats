@@ -56,6 +56,9 @@ export async function generateMetadata({ params }: DailySharePageProps): Promise
   
   const title = `${date} の食事まとめ - LogEats`;
   const description = `今日一日の摂取カロリー: ${Math.round(totalCal)}kcal。AIで食事記録を管理しています。`;
+  
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
+  const ogImageUrl = `${baseUrl}/share/daily/${id}/opengraph-image`;
 
   return {
     title,
@@ -64,13 +67,13 @@ export async function generateMetadata({ params }: DailySharePageProps): Promise
       title,
       description,
       type: "website",
-      images: [{ url: `/share/daily/${id}/opengraph-image`, width: 1200, height: 630 }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [`/share/daily/${id}/opengraph-image`],
+      images: [ogImageUrl],
     }
   };
 }

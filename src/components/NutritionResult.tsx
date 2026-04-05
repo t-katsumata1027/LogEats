@@ -48,8 +48,7 @@ export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn, share
     if (!id) return;
     
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
-    const path = short_id ? `/s/${short_id}` : `/share/${share_id}`;
-    const shareUrl = `${baseUrl}${path}`;
+    const shareUrl = short_id ? `${baseUrl}/s/${short_id}` : `${baseUrl}/share/${share_id}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
@@ -85,8 +84,7 @@ export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn, share
             <button
               onClick={() => {
                 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
-                const path = short_id ? `/s/${short_id}` : `/share/${share_id}`;
-                const shareUrl = `${baseUrl}${path}`;
+                const shareUrl = short_id ? `${baseUrl}/s/${short_id}` : `${baseUrl}/share/${share_id}`;
                 const shareText = `今日の食事解析結果 🔥\n${Math.round(summary.totalCalories)}kcal (P:${Math.round(summary.totalProtein)}g F:${Math.round(summary.totalFat)}g C:${Math.round(summary.totalCarbs)}g)\n#AI食事解析 #LogEats @EatsLog88161`;
                 const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
                 window.open(twitterUrl, "_blank");
