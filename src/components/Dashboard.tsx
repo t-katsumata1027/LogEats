@@ -246,9 +246,10 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
     const handleShareModal = (shareId: string | undefined, shortId?: string | null) => {
         if (!shareId) return;
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
         const shareUrl = shortId
-            ? `${window.location.origin}/s/${shortId}`
-            : `${window.location.origin}/share/${shareId}`;
+            ? `${baseUrl}/s/${shortId}`
+            : `${baseUrl}/share/${shareId}`;
 
         navigator.clipboard.writeText(shareUrl).then(() => {
             setCopiedShareId(shareId);
@@ -258,9 +259,10 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
     const handleShareX = (log: MealLog) => {
         if (!log.share_id) return;
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
         const shareUrl = log.short_id
-            ? `${window.location.origin}/s/${log.short_id}`
-            : `${window.location.origin}/share/${log.share_id}`;
+            ? `${baseUrl}/s/${log.short_id}`
+            : `${baseUrl}/share/${log.share_id}`;
         
         const shareText = `今日の食事解析結果 🔥\n${Math.round(log.total_calories)}kcal (P:${Math.round(log.total_protein)}g F:${Math.round(log.total_fat)}g C:${Math.round(log.total_carbs)}g)\n#AI食事解析 #LogEats @EatsLog88161`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
@@ -277,7 +279,8 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             });
             const { share_id, short_id } = await res.json();
             
-            const shareUrl = `${window.location.origin}/s/${short_id}`;
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
+            const shareUrl = `${baseUrl}/s/${short_id}`;
             const dateText = selectedDate.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
             const shareText = `${dateText} の食事まとめ 🔥\n合計: ${Math.round(selectedTotal)}kcal (P:${Math.round(selectedProtein)}g F:${Math.round(selectedFat)}g C:${Math.round(selectedCarbs)}g)\n#AI食事解析 #LogEats @EatsLog88161`;
             

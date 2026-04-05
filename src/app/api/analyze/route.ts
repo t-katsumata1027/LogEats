@@ -390,6 +390,7 @@ export async function POST(request: NextRequest) {
     let imageUrl = null;
     let savedLogId = null;
     let shareId = null;
+    const shortIdValue = generateShortId();
 
     // 1. 画像をVercel Blobへアップロード (public access)
     try {
@@ -418,7 +419,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const shortIdValue = generateShortId();
       const { rows } = loggedAtValue
         ? await sql`
           INSERT INTO meal_logs (
@@ -457,9 +457,9 @@ export async function POST(request: NextRequest) {
         `;
       if (rows.length > 0) {
         savedLogId = rows[0].id;
-        shareId = rows[0].share_id;
+        const share_id = rows[0].share_id;
         const short_id = rows[0].short_id;
-        return NextResponse.json({ foods, summary, savedLogId, shareId, short_id, is_ambiguous });
+        return NextResponse.json({ foods, summary, savedLogId, share_id, short_id, is_ambiguous });
       }
     } catch (e) {
       console.error("Database Insert Error:", e);
@@ -477,7 +477,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ foods, summary, savedLogId, shareId, is_ambiguous });
+    return NextResponse.json({ foods, summary, savedLogId, share_id: shareId, short_id: shortIdValue, is_ambiguous });
   } catch (e) {
     console.error("=== API Analysis Error ===", e);
     const err = e as { status?: number; message?: string; name?: string; stack?: string };

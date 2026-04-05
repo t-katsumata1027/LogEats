@@ -9,18 +9,25 @@ interface SharePageProps {
   params: Promise<{ id: string }>;
 }
 
-async function getMealLog(uuid: string) {
-  const { rows } = await sql`
-    SELECT * FROM meal_logs WHERE share_id = ${uuid} LIMIT 1;
-  `;
-  return rows[0];
+async function getMealLog(id: string) {
+  const isUuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(id);
+  
+  if (isUuid) {
+    const { rows } = await sql`
+      SELECT * FROM meal_logs WHERE share_id = ${id} LIMIT 1;
+    `;
+    return rows[0];
+  } else {
+    const { rows } = await sql`
+      SELECT * FROM meal_logs WHERE short_id = ${id} LIMIT 1;
+    `;
+    return rows[0];
+  }
 }
 
 export async function generateMetadata({ params }: SharePageProps): Promise<Metadata> {
   const { id } = await params;
-  // URLにテキストが混入した場合を考慮し、最初のUUID部分(36文字)のみを抽出
-  const uuid = id.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0] || id;
-  const log = await getMealLog(uuid);
+  const log = await getMealLog(id);
 
   if (!log) return { title: "Not Found - LogEats" };
 
@@ -54,9 +61,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
 
 export default async function SharePage({ params }: SharePageProps) {
   const { id } = await params;
-  // URLにテキストが混入した場合を考慮し、最初のUUID部分(36文字)のみを抽出
-  const uuid = id.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0] || id;
-  const log = await getMealLog(uuid);
+  const log = await getMealLog(id);
 
   if (!log) {
     notFound();

@@ -11,7 +11,23 @@ export function ReleaseNotes() {
                     <input type="radio" name="release-notes" defaultChecked />
                     <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
                         <span className="badge badge-success badge-sm text-white">New</span>
-                        <span>v1.6: チャット体験の向上と目標計算ツールの導入 🛠️</span>
+                        <span>v1.7: SNSシェア機能の大幅強化！𝕏 🚀</span>
+                    </div>
+                    <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
+                        <p>「どんなものを食べたか」「今日の目標を達成できたか」を、美しく簡単にSNSで共有できるようになりました！開発者自身も感じていた「手動投稿の面倒くささ」を、ボタン一つで解消します。🚀</p>
+                        <ul className="list-disc list-inside mt-2 space-y-1 ml-1 text-xs">
+                            <li><strong>𝕏 (X) 専用シェアボタン</strong>: 解析結果や履歴詳細から、ブランドロゴ入りのボタンでワンタップ投稿。</li>
+                            <li><strong>1日のまとめレポート</strong>: 今日一日の合計摂取量と目標達成度を、専用の特設ページでグラフと共に公開できます。</li>
+                            <li><strong>動的画像（OGP）生成</strong>: シェアURLを貼り付けると、解析数値や写真が合成された「今の成果」が伝わる画像が自動で表示されます。</li>
+                            <li><strong>URL短縮対応</strong>: シェアURLを `/s/xxxx` という短い形式に。SNSでの見栄えを最適化しました。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div className="collapse collapse-plus bg-white border border-sage-100 shadow-sm hover:shadow-md transition-shadow">
+                    <input type="radio" name="release-notes" />
+                    <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
+                        <span className="badge badge-neutral badge-sm text-white">v1.6</span>
+                        <span>チャット体験の向上と目標計算ツールの導入 🛠️</span>
                     </div>
                     <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
                         <p>より使いやすく、より楽しく食事管理ができるよう、大幅なUI/UXアップデートを実施しました！</p>

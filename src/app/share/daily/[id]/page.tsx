@@ -8,14 +8,25 @@ interface DailySharePageProps {
   params: Promise<{ id: string }>;
 }
 
-async function getDailyData(uuid: string) {
+async function getDailyData(id: string) {
+  const isUuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(id);
+  
   // share_id から設定を取得
-  const { rows: shareRows } = await sql`
-    SELECT * FROM daily_shares WHERE share_id = ${uuid} LIMIT 1;
-  `;
-  if (shareRows.length === 0) return null;
+  let share;
+  if (isUuid) {
+    const { rows: shareRows } = await sql`
+      SELECT * FROM daily_shares WHERE share_id = ${id} LIMIT 1;
+    `;
+    share = shareRows[0];
+  } else {
+    const { rows: shareRows } = await sql`
+      SELECT * FROM daily_shares WHERE short_id = ${id} LIMIT 1;
+    `;
+    share = shareRows[0];
+  }
 
-  const share = shareRows[0];
+  if (!share) return null;
+
   const dateStr = new Date(share.share_date).toISOString().split('T')[0];
 
   // 当日の食事ログを取得
