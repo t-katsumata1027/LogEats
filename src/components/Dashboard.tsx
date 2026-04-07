@@ -6,6 +6,7 @@ import "react-day-picker/style.css";
 import { ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
 import { WeeklyChart } from "@/components/WeeklyChart";
 import { AdBanner } from "@/components/AdBanner";
+import { AffiliateBanner } from "@/components/AffiliateBanner";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 
 type MealLog = {
@@ -781,8 +782,8 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
 
                     {/* ----- 広告枠（履歴の間） ----- */}
-                    <div className="py-2">
-                        <AdBanner adSlot="dashboard-timeline-slot" className="min-h-[100px]" />
+                    <div className="py-4 my-2">
+                        <AffiliateBanner variant="card" />
                     </div>
 
                     {/* ----- タイムライン ----- */}
@@ -1089,6 +1090,11 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                                     <div className="font-semibold text-sage-800">{Math.round(selectedLog.total_carbs)}g</div>
                                                 </div>
                                             </div>
+                                        </div>
+                                        
+                                        {/* アフィリエイト広告 (目立たないように配置) */}
+                                        <div className="mt-8 mb-2">
+                                            <AffiliateBanner variant="simple" />
                                         </div>
                                     </div>
                                 ) : (

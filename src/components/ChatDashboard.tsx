@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import type { AnalyzedFood } from "@/lib/types";
+import { AffiliateBanner } from "@/components/AffiliateBanner";
 
 type MealLog = {
     id: number;
@@ -18,7 +19,7 @@ type MealLog = {
 type ChatMessage = {
     id: string; // unique string (can be log id or temp id for user input)
     role: "user" | "bot" | "system";
-    type: "text" | "image" | "log" | "system_link";
+    type: "text" | "image" | "log" | "system_link" | "affiliate";
     content?: string;
     imageUrl?: string;
     logData?: MealLog;
@@ -282,6 +283,12 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                         type: "log",
                         logData: newLogData,
                         timestamp: new Date(nowTime.getTime() + 200)
+                    },
+                    {
+                        id: `bot-affiliate-${data.savedLogId || Date.now()}`,
+                        role: "system",
+                        type: "affiliate",
+                        timestamp: new Date(nowTime.getTime() + 300)
                     }
                 ];
             });
@@ -394,6 +401,12 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                         type: "log",
                         logData: savedLog,
                         timestamp: new Date(nowTime.getTime() + 200)
+                    },
+                    {
+                        id: `bot-affiliate-${savedLog?.id || Date.now()}`,
+                        role: "system",
+                        type: "affiliate",
+                        timestamp: new Date(nowTime.getTime() + 300)
                     }
                 ];
             });
@@ -456,11 +469,17 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                             )}
 
                             {msg.role === "system" ? (
-                                <div className="flex justify-center my-4 animate-fade-in-up">
-                                    <a href="/dashboard" className="bg-white border-2 border-sage-200 text-sage-600 text-xs font-bold px-4 py-2 rounded-full shadow-sm hover:bg-sage-50 transition-colors flex items-center gap-2">
-                                        📅 これ以前の履歴は履歴画面で確認できます ＞
-                                    </a>
-                                </div>
+                                msg.type === "affiliate" ? (
+                                    <div className="flex justify-center my-6 animate-fade-in-up w-full">
+                                        <AffiliateBanner variant="card" />
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-center my-4 animate-fade-in-up">
+                                        <a href="/dashboard" className="bg-white border-2 border-sage-200 text-sage-600 text-xs font-bold px-4 py-2 rounded-full shadow-sm hover:bg-sage-50 transition-colors flex items-center gap-2">
+                                            📅 これ以前の履歴は履歴画面で確認できます ＞
+                                        </a>
+                                    </div>
+                                )
                             ) : msg.role === "user" ? (
                                 <div className="chat chat-end animate-fade-in-up">
                                     <div className="chat-header text-[10px] text-sage-400 opacity-80 mb-1 mr-1">

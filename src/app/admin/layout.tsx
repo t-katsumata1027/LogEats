@@ -1,7 +1,7 @@
 import { getCurrentUserEmail } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Users, FileText, AlertTriangle, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, FileText, AlertTriangle, ArrowLeft, Megaphone } from "lucide-react";
 
 export default async function AdminLayout({
     children,
@@ -33,6 +33,10 @@ export default async function AdminLayout({
                             <FileText className="w-5 h-5" />
                             <span>食事記録</span>
                         </Link>
+                        <Link href="/admin/affiliates" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-sage-100 text-sage-700 transition-colors">
+                            <Megaphone className="w-5 h-5" />
+                            <span>広告管理</span>
+                        </Link>
                         <Link href="/admin/errors" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-sage-100 text-red-600 transition-colors">
                             <AlertTriangle className="w-5 h-5" />
                             <span>エラーログ</span>
@@ -59,6 +63,10 @@ export default async function AdminLayout({
                 <Link href="/admin/logs" className="flex flex-col items-center p-2 text-sage-600">
                     <FileText className="w-5 h-5" />
                     <span className="text-[10px] mt-1">記録</span>
+                </Link>
+                <Link href="/admin/affiliates" className="flex flex-col items-center p-2 text-sage-600">
+                    <Megaphone className="w-5 h-5" />
+                    <span className="text-[10px] mt-1">広告</span>
                 </Link>
                 <Link href="/admin/errors" className="flex flex-col items-center p-2 text-red-500">
                     <AlertTriangle className="w-5 h-5" />
