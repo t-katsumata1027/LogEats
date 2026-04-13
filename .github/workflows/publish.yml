@@ -27,3 +27,5 @@ jobs:
         with:
           qiita-token: ${{ secrets.QIITA_TOKEN }}
           root: "."
+        env:
+          QIITA_TOKEN: ${{ secrets.QIITA_TOKEN }}
