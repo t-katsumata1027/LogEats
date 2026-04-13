@@ -265,7 +265,7 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             ? `${baseUrl}/s/${log.short_id}`
             : `${baseUrl}/share/${log.share_id}`;
         
-        const shareText = `今日の食事解析結果 🔥\n${Math.round(log.total_calories)}kcal (P:${Math.round(log.total_protein)}g F:${Math.round(log.total_fat)}g C:${Math.round(log.total_carbs)}g)\n#AI食事解析 #LogEats @EatsLog88161`;
+        const shareText = `今日の食事解析結果 🔥\n${Math.round(log.total_calories)}kcal (P:${Math.round(log.total_protein)}g F:${Math.round(log.total_fat)}g C:${Math.round(log.total_carbs)}g)\n#AI食事解析 #LogEats #食事記録 @EatsLog88161`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
         window.open(twitterUrl, "_blank");
     };
@@ -283,7 +283,7 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
             const shareUrl = `${baseUrl}/s/${short_id}`;
             const dateText = selectedDate.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
-            const shareText = `${dateText} の食事まとめ 🔥\n合計: ${Math.round(selectedTotal)}kcal (P:${Math.round(selectedProtein)}g F:${Math.round(selectedFat)}g C:${Math.round(selectedCarbs)}g)\n#AI食事解析 #LogEats @EatsLog88161`;
+            const shareText = `${dateText} の食事まとめ 🔥\n合計: ${Math.round(selectedTotal)}kcal (P:${Math.round(selectedProtein)}g F:${Math.round(selectedFat)}g C:${Math.round(selectedCarbs)}g)\n#AI食事解析 #LogEats #食事記録 @EatsLog88161`;
             
             const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
             window.open(twitterUrl, "_blank");

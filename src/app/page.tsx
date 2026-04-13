@@ -7,6 +7,7 @@ import { AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScre
 import { WeeklyChartDemo } from "@/components/WeeklyChartDemo";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
 import { AdBanner } from "@/components/AdBanner";
+import { AffiliateBanner } from "@/components/AffiliateBanner";
 import { LineConnectModalButton } from "@/components/LineConnectModalButton";
 import { GoalCalculator } from "@/components/GoalCalculator";
 import type { Metadata } from "next";
@@ -116,13 +117,18 @@ export default async function Home() {
             </div>
 
             {/* Try it out Section */}
-            <div className="relative z-10 mb-20 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <div className="relative z-10 mb-12 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <div className="bg-white/50 backdrop-blur-md border border-sage-200/50 p-6 sm:p-8 rounded-3xl shadow-xl">
                 <h3 className="text-xl font-bold text-sage-800 tracking-tight text-center mb-6 flex items-center justify-center gap-2">
                   <span>✨</span> ログイン不要でお試し
                 </h3>
                 <AnalyzerClient isLoggedIn={false} />
               </div>
+            </div>
+
+            {/* Affiliate Banner 1 */}
+            <div className="mb-12">
+              <AffiliateBanner />
             </div>
 
             {/* Release Notes */}

@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
     '/news(.*)',               // お知らせ・記事ページ（AdSense用）
     '/share(.*)',              // 公開シェアページ
     '/s/(.*)',                 // 短縮URLシェアページ
+    '/api/affiliates/random',  // アフィリエイト広告取得API（公開）
 ])
 
 export default clerkMiddleware(async (auth, request) => {

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { NutritionResult } from "@/components/NutritionResult";
+import { AffiliateBanner } from "@/components/AffiliateBanner";
 import { Metadata } from "next";
 
 interface SharePageProps {
@@ -137,6 +138,8 @@ export default async function SharePage({ params }: SharePageProps) {
             summary={summary} 
             isLoggedIn={false} 
           />
+
+          <AffiliateBanner />
 
           <div className="mt-12 p-8 rounded-3xl bg-gradient-to-br from-sage-800 to-sage-900 text-white text-center shadow-lg">
             <h2 className="text-xl font-bold mb-3">あなたも今日の食事を解析してみませんか？</h2>
