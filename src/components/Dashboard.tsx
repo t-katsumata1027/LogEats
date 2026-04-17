@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 import { ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
@@ -271,13 +272,24 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     };
 
     const handleShareDailyX = async () => {
+        // ポップアップブロック回避のため、まずウィンドウを開く
+        const win = window.open('about:blank', '_blank');
+        if (!win) {
+            alert("ポップアップがブロックされました。ブラウザの設定を確認してください。");
+            return;
+        }
+
         try {
-            const dateStr = selectedDate.toISOString().split('T')[0];
+            // タイムゾーンによる日付のずれを防ぐため、formatを使用
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
             const res = await fetch('/api/shares/daily', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ date: dateStr })
             });
+
+            if (!res.ok) throw new Error("API request failed");
+
             const { share_id, short_id } = await res.json();
             
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
@@ -286,9 +298,12 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             const shareText = `${dateText} の食事まとめ 🔥\n合計: ${Math.round(selectedTotal)}kcal (P:${Math.round(selectedProtein)}g F:${Math.round(selectedFat)}g C:${Math.round(selectedCarbs)}g)\n#AI食事解析 #LogEats #食事記録 @EatsLog88161`;
             
             const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-            window.open(twitterUrl, "_blank");
+            
+            // 開いておいたウィンドウのURLを更新
+            win.location.href = twitterUrl;
         } catch (err) {
             console.error("Daily share failed:", err);
+            win.close(); // 失敗した場合は開いたウィンドウを閉じる
             alert("シェアに失敗しました");
         }
     };

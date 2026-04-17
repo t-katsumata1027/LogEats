@@ -19,8 +19,16 @@ export async function POST(request: NextRequest) {
     }
 
     const { date } = await request.json();
-    const targetDate = date ? new Date(date) : new Date();
-    const dateStr = targetDate.toISOString().split('T')[0];
+    let dateStr;
+    if (date) {
+      // フロントから yyyy-MM-dd 形式で渡されている場合はそのまま使用
+      dateStr = date;
+    } else {
+      // 未指定の場合は日本時間(JST)での日付を生成
+      const now = new Date();
+      const jstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+      dateStr = jstDate.toISOString().split('T')[0];
+    }
 
     // 既存のシェア設定を確認
     const { rows: existing } = await sql`

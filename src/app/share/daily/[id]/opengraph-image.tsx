@@ -11,12 +11,12 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     let share;
     if (isUuid) {
       const { rows } = await sql`
-        SELECT * FROM daily_shares WHERE share_id = ${id} LIMIT 1;
+        SELECT *, TO_CHAR(share_date, 'YYYY-MM-DD') as share_date_str FROM daily_shares WHERE share_id = ${id} LIMIT 1;
       `;
       share = rows[0];
     } else {
       const { rows } = await sql`
-        SELECT * FROM daily_shares WHERE short_id = ${id} LIMIT 1;
+        SELECT *, TO_CHAR(share_date, 'YYYY-MM-DD') as share_date_str FROM daily_shares WHERE short_id = ${id} LIMIT 1;
       `;
       share = rows[0];
     }
@@ -25,15 +25,18 @@ export default async function Image({ params }: { params: Promise<{ id: string }
       return new ImageResponse(<div style={{ background: 'white', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>Daily Summary Not Found</div>);
     }
 
-    const shareDate = share.share_date ? new Date(share.share_date) : new Date();
-    const dateStr = shareDate.toISOString().split('T')[0];
+    const dateStr = share.share_date_str;
+    const [y_part, m_part, d_part] = dateStr.split('-').map(Number);
 
     const { rows: logs } = await sql`
       SELECT total_calories, total_protein, total_fat, total_carbs, image_url, analyzed_data 
       FROM meal_logs 
       WHERE user_id = ${share.user_id} 
-        AND logged_at::date = ${dateStr}::date;
+        AND TO_CHAR(logged_at AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD') = ${dateStr};
     `;
+
+    console.log(`[OGP] share_id: ${id}, user_id: ${share.user_id}, date: ${dateStr}, logs found: ${logs.length}`);
+// ... (omitting intermediate lines for clarity in the tool call if possible, but I should use the whole block)
 
     const { rows: userRows } = await sql`
       SELECT target_calories, target_protein, target_fat, target_carbs, tolerance_pct FROM users WHERE id = ${share.user_id} LIMIT 1;
@@ -61,9 +64,9 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     }).filter(Boolean).join("、");
     const displayItems = allMealNames.length > 60 ? allMealNames.slice(0, 57) + "..." : allMealNames;
 
-    // Fetch Noto Sans JP Bold from a verified source
+    // Fetch Noto Sans JP Bold from a more stable CDN source (jsDelivr)
     const fontRes = await fetch(
-      new URL('https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/SubsetOTF/JP/NotoSansJP-Bold.otf')
+      new URL('https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/JP/NotoSansJP-Bold.otf')
     );
     if (!fontRes.ok) throw new Error(`Failed to fetch font: ${fontRes.status} ${fontRes.statusText}`);
     const fontData = await fontRes.arrayBuffer();
@@ -133,7 +136,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                     AI食事解析
                   </div>
                   <div tw="flex text-slate-900 text-3xl font-black tracking-tighter">
-                    {shareDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} 食事の解析結果
+                    {`${m_part}月${d_part}日`} 食事の解析結果
                   </div>
                 </div>
                 <div tw="flex text-[10px] text-slate-400 font-bold">

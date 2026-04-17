@@ -15,25 +15,25 @@ async function getDailyData(id: string) {
   let share;
   if (isUuid) {
     const { rows: shareRows } = await sql`
-      SELECT * FROM daily_shares WHERE share_id = ${id} LIMIT 1;
+      SELECT *, TO_CHAR(share_date, 'YYYY-MM-DD') as share_date_str FROM daily_shares WHERE share_id = ${id} LIMIT 1;
     `;
     share = shareRows[0];
   } else {
     const { rows: shareRows } = await sql`
-      SELECT * FROM daily_shares WHERE short_id = ${id} LIMIT 1;
+      SELECT *, TO_CHAR(share_date, 'YYYY-MM-DD') as share_date_str FROM daily_shares WHERE short_id = ${id} LIMIT 1;
     `;
     share = shareRows[0];
   }
 
   if (!share) return null;
 
-  const dateStr = new Date(share.share_date).toISOString().split('T')[0];
+  const dateStr = share.share_date_str;
 
-  // 当日の食事ログを取得
+  // 当日の食事ログを取得 (日本時間 JST で集計)
   const { rows: logs } = await sql`
     SELECT * FROM meal_logs 
     WHERE user_id = ${share.user_id} 
-      AND logged_at::date = ${dateStr}::date
+      AND TO_CHAR(logged_at AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD') = ${dateStr}
     ORDER BY logged_at ASC;
   `;
 
@@ -52,7 +52,9 @@ export async function generateMetadata({ params }: DailySharePageProps): Promise
   if (!data) return { title: "Not Found - LogEats" };
 
   const totalCal = data.logs.reduce((s, l) => s + l.total_calories, 0);
-  const date = new Date(data.share.share_date).toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
+  // share_date_str (YYYY-MM-DD) から表示用日付を生成
+  const [y, m, d] = data.share.share_date_str.split('-').map(Number);
+  const date = `${m}月${d}日`;
   
   const title = `${date} の食事まとめ - LogEats`;
   const description = `今日一日の摂取カロリー: ${Math.round(totalCal)}kcal。AIで食事記録を管理しています。`;
@@ -108,7 +110,7 @@ export default async function DailySharePage({ params }: DailySharePageProps) {
         <div className="p-6 space-y-8">
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-2 bg-sage-100 text-sage-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-              <span>📅</span> {new Date(data.share.share_date).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}
+              <span>📅</span> {data.share.share_date_str.replace(/-/g, '/')}
             </div>
             <h1 className="text-2xl font-black text-sage-900">一日の食事まとめレポート</h1>
           </div>
