@@ -56,13 +56,20 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     const [selectedLog, setSelectedLog] = useState<MealLog | null>(null);
     const [copiedShareId, setCopiedShareId] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [editValues, setEditValues] = useState({
+    const [editValues, setEditValues] = useState<{
+        total_calories: number | "";
+        total_protein: number | "";
+        total_fat: number | "";
+        total_carbs: number | "";
+        meal_type: string;
+        foods: any[];
+    }>({
         total_calories: 0,
         total_protein: 0,
         total_fat: 0,
         total_carbs: 0,
         meal_type: "other",
-        foods: [] as AnalyzedFood[]
+        foods: []
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -169,7 +176,19 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
         try {
             const payload = {
                 ...editValues,
-                analyzed_data: { foods: editValues.foods },
+                total_calories: Number(editValues.total_calories) || 0,
+                total_protein: Number(editValues.total_protein) || 0,
+                total_fat: Number(editValues.total_fat) || 0,
+                total_carbs: Number(editValues.total_carbs) || 0,
+                analyzed_data: { 
+                    foods: editValues.foods.map(f => ({
+                        ...f,
+                        calories: Number(f.calories) || 0,
+                        protein: Number(f.protein) || 0,
+                        fat: Number(f.fat) || 0,
+                        carbs: Number(f.carbs) || 0
+                    }))
+                },
                 meal_type: editValues.meal_type,
             };
             const res = await fetch(`/api/logs/${selectedLog.id}`, {
@@ -182,12 +201,20 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             // 画面のStateを更新
             setLogs(logs.map(l => l.id === selectedLog.id ? {
                 ...l,
-                total_calories: editValues.total_calories,
-                total_protein: editValues.total_protein,
-                total_fat: editValues.total_fat,
-                total_carbs: editValues.total_carbs,
+                total_calories: Number(editValues.total_calories) || 0,
+                total_protein: Number(editValues.total_protein) || 0,
+                total_fat: Number(editValues.total_fat) || 0,
+                total_carbs: Number(editValues.total_carbs) || 0,
                 meal_type: editValues.meal_type,
-                analyzed_data: { foods: editValues.foods }
+                analyzed_data: { 
+                    foods: editValues.foods.map(f => ({
+                        ...f,
+                        calories: Number(f.calories) || 0,
+                        protein: Number(f.protein) || 0,
+                        fat: Number(f.fat) || 0,
+                        carbs: Number(f.carbs) || 0
+                    }))
+                }
             } : l));
             fetchData(); // 目標カロリー等の再取得
             closeModal();
@@ -389,19 +416,20 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
     const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setEditValues(prev => ({ ...prev, [name]: Number(value) || 0 }));
+        setEditValues(prev => ({ ...prev, [name]: value === "" ? "" : Number(value) }));
     };
 
-    const handleFoodEditChange = (index: number, field: keyof AnalyzedFood, value: string | number) => {
+    const handleFoodEditChange = (index: number, field: keyof AnalyzedFood, value: string) => {
         setEditValues(prev => {
             const newFoods = [...prev.foods];
-            newFoods[index] = { ...newFoods[index], [field]: value };
+            const numericValue = value === "" ? "" : Number(value);
+            newFoods[index] = { ...newFoods[index], [field]: numericValue };
 
-            // Recalculate totals
-            const totalCals = newFoods.reduce((sum, f) => sum + Number(f.calories || 0), 0);
-            const totalPro = newFoods.reduce((sum, f) => sum + Number(f.protein || 0), 0);
-            const totalFat = newFoods.reduce((sum, f) => sum + Number(f.fat || 0), 0);
-            const totalCarb = newFoods.reduce((sum, f) => sum + Number(f.carbs || 0), 0);
+            // Recalculate totals (treat "" as 0 for sum)
+            const totalCals = newFoods.reduce((sum, f) => sum + (Number(f.calories) || 0), 0);
+            const totalPro = newFoods.reduce((sum, f) => sum + (Number(f.protein) || 0), 0);
+            const totalFat = newFoods.reduce((sum, f) => sum + (Number(f.fat) || 0), 0);
+            const totalCarb = newFoods.reduce((sum, f) => sum + (Number(f.carbs) || 0), 0);
 
             return {
                 ...prev,
@@ -417,10 +445,10 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     const handleRemoveFood = (index: number) => {
         setEditValues(prev => {
             const newFoods = prev.foods.filter((_, i) => i !== index);
-            const totalCals = newFoods.reduce((sum, f) => sum + Number(f.calories || 0), 0);
-            const totalPro = newFoods.reduce((sum, f) => sum + Number(f.protein || 0), 0);
-            const totalFat = newFoods.reduce((sum, f) => sum + Number(f.fat || 0), 0);
-            const totalCarb = newFoods.reduce((sum, f) => sum + Number(f.carbs || 0), 0);
+            const totalCals = newFoods.reduce((sum, f) => sum + (Number(f.calories) || 0), 0);
+            const totalPro = newFoods.reduce((sum, f) => sum + (Number(f.protein) || 0), 0);
+            const totalFat = newFoods.reduce((sum, f) => sum + (Number(f.fat) || 0), 0);
+            const totalCarb = newFoods.reduce((sum, f) => sum + (Number(f.carbs) || 0), 0);
 
             return {
                 ...prev,
@@ -1197,19 +1225,19 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                                         <div className="grid grid-cols-4 gap-2">
                                                             <div>
                                                                 <span className="text-[10px] text-sage-500 block mb-0.5">kcal</span>
-                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.calories} onChange={(e) => handleFoodEditChange(idx, 'calories', Number(e.target.value) || 0)} />
+                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.calories} onChange={(e) => handleFoodEditChange(idx, 'calories', e.target.value)} />
                                                             </div>
                                                             <div>
                                                                 <span className="text-[10px] text-sage-500 block mb-0.5">Pro (g)</span>
-                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.protein} onChange={(e) => handleFoodEditChange(idx, 'protein', Number(e.target.value) || 0)} />
+                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.protein} onChange={(e) => handleFoodEditChange(idx, 'protein', e.target.value)} />
                                                             </div>
                                                             <div>
                                                                 <span className="text-[10px] text-sage-500 block mb-0.5">Fat (g)</span>
-                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.fat} onChange={(e) => handleFoodEditChange(idx, 'fat', Number(e.target.value) || 0)} />
+                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.fat} onChange={(e) => handleFoodEditChange(idx, 'fat', e.target.value)} />
                                                             </div>
                                                             <div>
                                                                 <span className="text-[10px] text-sage-500 block mb-0.5">Carb (g)</span>
-                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.carbs} onChange={(e) => handleFoodEditChange(idx, 'carbs', Number(e.target.value) || 0)} />
+                                                                <input type="number" min="0" className="input input-bordered input-xs w-full" value={food.carbs} onChange={(e) => handleFoodEditChange(idx, 'carbs', e.target.value)} />
                                                             </div>
                                                         </div>
                                                     </div>

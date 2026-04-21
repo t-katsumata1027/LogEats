@@ -220,6 +220,10 @@ export async function POST(req: NextRequest) {
 
                     } catch (e) {
                         console.error("Error analyzing LINE image", e);
+                        // もしAPIエラーであればレスポンス内容を確認できるようにする
+                        if (e instanceof Error) {
+                            console.error("Error details:", e.message);
+                        }
                         if (event.source.userId) {
                             await lineClient.pushMessage({
                                 to: event.source.userId,

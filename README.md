@@ -45,7 +45,7 @@ npm run dev
 ## 技術構成
 
 - **フロント**: Next.js 15 (App Router), React 19, Tailwind CSS
-- **画像認識**: Google Gemini (gemini-3-flash-preview) または OpenAI (gpt-4o-mini Vision)。`.env.local` に設定したキーに応じて自動で切り替わります。
+- **画像認識**: Google Gemini (gemini-3.1-flash-lite-preview) または OpenAI (gpt-4o-mini Vision)。`.env.local` に設定したキーに応じて自動で切り替わります。
 - **栄養データ**: 内蔵の食品DB（`src/lib/foodDatabase.ts`）＋ 未登録時は AI で推定して `data/learnedFoods.json` に自動追加
 
 ## 注意
