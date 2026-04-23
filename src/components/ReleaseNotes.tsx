@@ -11,6 +11,21 @@ export function ReleaseNotes() {
                     <input type="radio" name="release-notes" defaultChecked />
                     <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
                         <span className="badge badge-success badge-sm text-white">New</span>
+                        <span>v1.8: 食事解析の精度が飛躍的に向上！栄養成分ラベルの直接読み取りに対応 🔍🍱</span>
+                    </div>
+                    <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
+                        <p>より正確な食事管理を実現するため、解析ロジックの大幅な刷新とデータベースの拡充を行いました！🔍</p>
+                        <ul className="list-disc list-inside mt-2 space-y-1 ml-1 text-xs">
+                            <li><strong>ラベル優先抽出ロジック</strong>: コンビニ商品などのパッケージ裏面（栄養成分表示）が写っている場合、AIがその数値を直接読み取り、公式データを最優先で採用します。</li>
+                            <li><strong>3,500件超の食品データベース</strong>: 厚生労働省「日本食品標準成分表（八訂）」および、コンビニ大手3社の最新商品データをシステムに統合。商品名を特定した際の精度が劇的に向上しました。</li>
+                            <li><strong>独自検算ルーチンの導入</strong>: AIによる数値の矛盾（ハルシネーション）を防ぐため、PFCバランスからの逆算・検算プロセスを強化し、より信頼性の高いデータを記録します。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div className="collapse collapse-plus bg-white border border-sage-100 shadow-sm hover:shadow-md transition-shadow">
+                    <input type="radio" name="release-notes" />
+                    <div className="collapse-title text-base sm:text-lg font-bold text-sage-800 flex items-center gap-3">
+                        <span className="badge badge-neutral badge-sm text-white">v1.7</span>
                         <span>v1.7: SNSシェア機能の大幅強化！𝕏 🚀</span>
                     </div>
                     <div className="collapse-content text-sage-600 text-sm leading-relaxed space-y-2">
