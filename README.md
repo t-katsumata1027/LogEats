@@ -7,7 +7,8 @@
 - 食事の写真をアップロード
 - AI（Google Gemini または OpenAI）で写っている料理・食品を認識
 - 食品ごとのカロリー・栄養素を表示し、合計を算出
-- **未登録の食品**は AI で栄養を推定し、`data/learnedFoods.json` に自動保存。次回からはそのデータを利用
+- **未登録の食品**は AI で栄養を推定し、データベース（Vercel Postgres）の `learned_foods` テーブルに自動保存。次回からはその学習済みデータを利用してAPIコストを削減
+- **LINE連携**: LINE Botに食事の写真を送信するだけで自動で解析・記録（アカウント連携時）
 
 ## 必要な環境
 
@@ -42,11 +43,14 @@ npm run dev
 
 ブラウザで [http://localhost:3000](http://localhost:3000) を開いて利用できます。
 
-## 技術構成
+## 技術構成 (アーキテクチャ)
 
-- **フロント**: Next.js 15 (App Router), React 19, Tailwind CSS
-- **画像認識**: Google Gemini (gemini-3.1-flash-lite-preview) または OpenAI (gpt-4o-mini Vision)。`.env.local` に設定したキーに応じて自動で切り替わります。
-- **栄養データ**: 内蔵の食品DB（`src/lib/foodDatabase.ts`）＋ 未登録時は AI で推定して `data/learnedFoods.json` に自動追加
+- **フロントエンド / フレームワーク**: Next.js 15 (App Router), React 19, Tailwind CSS, DaisyUI
+- **認証**: Clerk（ログイン、ユーザー管理、LINE連携）
+- **データベース**: Vercel Postgres（`users`, `meal_logs`, `learned_foods` など）
+- **ストレージ**: Vercel Blob（食事画像の保存）
+- **画像認識・栄養データ補完**: Google Gemini (gemini-3.1-flash-lite-preview) または OpenAI (gpt-4o-mini Vision)
+- **外部連携**: LINE Bot SDK (LINEからの画像投稿・解析レスポンス機能)
 
 ## 注意
 

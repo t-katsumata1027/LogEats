@@ -1,3 +1,10 @@
+export interface LabelNutrition {
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+}
+
 export interface AnalyzedFood {
   name: string;
   nameJa?: string;
@@ -6,6 +13,7 @@ export interface AnalyzedFood {
   protein: number;
   fat: number;
   carbs: number;
+  label_nutrition?: LabelNutrition;
 }
 
 export interface NutritionSummary {
