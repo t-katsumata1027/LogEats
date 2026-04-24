@@ -14,6 +14,7 @@ import {
 } from "@/app/api/analyze/route";
 import { lookupFoodMasterWithLearned, loadLearnedFoods, addLearnedFood } from "@/lib/foodDatabase";
 import type { AnalyzedFood } from "@/lib/types";
+import { createRequestId, logStep } from "@/lib/analyzeLogger";
 
 export const maxDuration = 60; // タイムアウト延長
 
@@ -113,10 +114,27 @@ export async function POST(req: NextRequest) {
                         const base64 = arrayBufferToBase64(arrayBuffer);
 
                         // Gemini/OpenAIによる解析
+                        const requestId = createRequestId();
                         const useGemini = !!process.env.GEMINI_API_KEY;
+                        logStep(requestId, "line", "START", {
+                            lineUserId,
+                            aiProvider: useGemini ? "gemini" : "openai",
+                        });
+
                         const { foods: recognizedRaw, is_ambiguous } = useGemini
                             ? await recognizeWithGemini(base64)
                             : await recognizeWithOpenAI(base64);
+
+                        logStep(requestId, "line", "AI_RECOGNITION_RESULT", {
+                            is_ambiguous,
+                            recognizedCount: recognizedRaw.length,
+                            foods: recognizedRaw.map((f) => ({
+                                name: f.name,
+                                amount: f.amount,
+                                hasLabelNutrition: !!f.label_nutrition,
+                                label_nutrition: f.label_nutrition ?? null,
+                            })),
+                        });
 
                         if (recognizedRaw.length === 0) {
                             if (event.source.userId) {
@@ -132,12 +150,38 @@ export async function POST(req: NextRequest) {
                         const learned = await loadLearnedFoods();
                         const foods: AnalyzedFood[] = [];
 
-                        for (const { name, amount } of recognizedRaw) {
+                        for (const { name, amount, label_nutrition } of recognizedRaw) {
+                            // ラベルから栄養素が取得できた場合はフェーズ2（DB参照・AI推計）をバイパスする
+                            if (
+                                label_nutrition &&
+                                typeof label_nutrition.calories === "number" &&
+                                typeof label_nutrition.protein === "number" &&
+                                typeof label_nutrition.fat === "number" &&
+                                typeof label_nutrition.carbs === "number"
+                            ) {
+                                logStep(requestId, "line", "LABEL_BYPASS", { name, amount, label_nutrition });
+                                foods.push({
+                                    name,
+                                    nameJa: name,
+                                    amount: amount || "1個",
+                                    calories: Math.round(label_nutrition.calories),
+                                    protein: Math.round(label_nutrition.protein * 10) / 10,
+                                    fat: Math.round(label_nutrition.fat * 10) / 10,
+                                    carbs: Math.round(label_nutrition.carbs * 10) / 10,
+                                    label_nutrition,
+                                });
+                                continue;
+                            }
+
                             let masterRecord = lookupFoodMasterWithLearned(name, learned);
 
                             if (!masterRecord) {
+                                logStep(requestId, "line", "DB_LOOKUP_MISS", { name, amount });
                                 masterRecord = await estimateNutritionWithAI(name, amount);
+                                logStep(requestId, "line", "AI_ESTIMATION_RESULT", { name, amount, masterRecord });
                                 await addLearnedFood(name, masterRecord);
+                            } else {
+                                logStep(requestId, "line", "DB_LOOKUP_HIT", { name, masterRecord });
                             }
 
                             let weightG = masterRecord.standard_weight_g;
@@ -147,7 +191,14 @@ export async function POST(req: NextRequest) {
                                     const numStr = match[1].replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
                                     const parsed = parseFloat(numStr);
                                     if (!isNaN(parsed) && parsed > 0) {
+                                        const prevWeight = weightG;
                                         weightG = parsed;
+                                        logStep(requestId, "line", "WEIGHT_OVERRIDE", {
+                                            name,
+                                            amountString: amount,
+                                            prevWeightG: prevWeight,
+                                            newWeightG: weightG,
+                                        });
                                     }
                                 }
                             }
@@ -157,6 +208,19 @@ export async function POST(req: NextRequest) {
                             const initialFat = masterRecord.per_100g.fat * ratio;
                             const initialCarbs = masterRecord.per_100g.carbs * ratio;
                             const validatedCalories = validateAndCalculateCalories(initialProtein, initialFat, initialCarbs);
+
+                            logStep(requestId, "line", "FOOD_CALC", {
+                                name,
+                                amount,
+                                weightG,
+                                per100g: masterRecord.per_100g,
+                                calculated: {
+                                    calories: Math.round(validatedCalories),
+                                    protein: Math.round(initialProtein * 10) / 10,
+                                    fat: Math.round(initialFat * 10) / 10,
+                                    carbs: Math.round(initialCarbs * 10) / 10,
+                                },
+                            });
 
                             foods.push({
                                 name,
@@ -170,6 +234,14 @@ export async function POST(req: NextRequest) {
                         }
 
                         const summary = buildSummary(foods);
+
+                        logStep(requestId, "line", "SUMMARY", {
+                            totalCalories: summary.totalCalories,
+                            totalProtein: summary.totalProtein,
+                            totalFat: summary.totalFat,
+                            totalCarbs: summary.totalCarbs,
+                            foodCount: foods.length,
+                        });
 
                         if (userId) {
                             // Blobストレージにアップロード

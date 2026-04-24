@@ -15,6 +15,7 @@ import { getDbUserId } from "@/auth";
 import { put } from "@vercel/blob";
 import { sql } from "@vercel/postgres";
 import { logErrorAndNotify } from "@/lib/errorLogger";
+import { createRequestId, logStep } from "@/lib/analyzeLogger";
 
 const PROMPT = `あなたは食事解析の専門AIです。提供された画像から料理や食品を特定し、以下の手順で分析を行ってください。
 
@@ -318,6 +319,7 @@ function generateShortId(length = 8) {
 export async function POST(request: NextRequest) {
   const useGemini = !!process.env.GEMINI_API_KEY;
   const useOpenAI = !!process.env.OPENAI_API_KEY;
+  const requestId = createRequestId();
 
   try {
     if (!useGemini && !useOpenAI) {
@@ -337,6 +339,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "画像ファイルを送信してください。" }, { status: 400 });
     }
 
+    logStep(requestId, "web", "START", {
+      aiProvider: useGemini ? "gemini" : "openai",
+      imageSizeBytes: (image as Blob).size,
+      mealType: formData.get("meal_type") ?? "unknown",
+    });
+
     // Node.js の Buffer ではなく Edge 環境で確実に安全な Base64 変換を利用する
     const arrayBuffer = await image.arrayBuffer();
     const base64 = arrayBufferToBase64(arrayBuffer);
@@ -344,6 +352,17 @@ export async function POST(request: NextRequest) {
     const { foods: recognizedRaw, is_ambiguous } = useGemini
       ? await recognizeWithGemini(base64)
       : await recognizeWithOpenAI(base64);
+
+    logStep(requestId, "web", "AI_RECOGNITION_RESULT", {
+      is_ambiguous,
+      recognizedCount: recognizedRaw.length,
+      foods: recognizedRaw.map((f) => ({
+        name: f.name,
+        amount: f.amount,
+        hasLabelNutrition: !!f.label_nutrition,
+        label_nutrition: f.label_nutrition ?? null,
+      })),
+    });
 
     const learned = await loadLearnedFoods();
     const foods: AnalyzedFood[] = [];
@@ -357,6 +376,11 @@ export async function POST(request: NextRequest) {
         typeof label_nutrition.fat === "number" &&
         typeof label_nutrition.carbs === "number"
       ) {
+        logStep(requestId, "web", "LABEL_BYPASS", {
+          name,
+          amount,
+          label_nutrition,
+        });
         foods.push({
           name,
           nameJa: name,
@@ -374,8 +398,16 @@ export async function POST(request: NextRequest) {
 
       // DBにない場合はAIでグラム単位の推定を実行
       if (!masterRecord) {
+        logStep(requestId, "web", "DB_LOOKUP_MISS", { name, amount });
         masterRecord = await estimateNutritionWithAI(name, amount);
+        logStep(requestId, "web", "AI_ESTIMATION_RESULT", {
+          name,
+          amount,
+          masterRecord,
+        });
         await addLearnedFood(name, masterRecord);
+      } else {
+        logStep(requestId, "web", "DB_LOOKUP_HIT", { name, masterRecord });
       }
 
       // TODO: 実際のアプリでは "amount" の文字列から重量をさらに調整等が可能
@@ -390,7 +422,14 @@ export async function POST(request: NextRequest) {
           const numStr = match[1].replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
           const parsed = parseFloat(numStr);
           if (!isNaN(parsed) && parsed > 0) {
+            const prevWeight = weightG;
             weightG = parsed;
+            logStep(requestId, "web", "WEIGHT_OVERRIDE", {
+              name,
+              amountString: amount,
+              prevWeightG: prevWeight,
+              newWeightG: weightG,
+            });
           }
         }
       }
@@ -403,6 +442,19 @@ export async function POST(request: NextRequest) {
 
       // 検算ロジックのアトウォーター係数を適用して全体のカロリーを算出
       const validatedCalories = validateAndCalculateCalories(initialProtein, initialFat, initialCarbs);
+
+      logStep(requestId, "web", "FOOD_CALC", {
+        name,
+        amount,
+        weightG,
+        per100g: masterRecord.per_100g,
+        calculated: {
+          calories: Math.round(validatedCalories),
+          protein: Math.round(initialProtein * 10) / 10,
+          fat: Math.round(initialFat * 10) / 10,
+          carbs: Math.round(initialCarbs * 10) / 10,
+        },
+      });
 
       foods.push({
         name,
@@ -423,6 +475,14 @@ export async function POST(request: NextRequest) {
     }
 
     const summary = buildSummary(foods);
+
+    logStep(requestId, "web", "SUMMARY", {
+      totalCalories: summary.totalCalories,
+      totalProtein: summary.totalProtein,
+      totalFat: summary.totalFat,
+      totalCarbs: summary.totalCarbs,
+      foodCount: foods.length,
+    });
 
     // --- Phase 2: 画像をBlobへアップロードしDBに記録する ---
     const userId = await getDbUserId();
@@ -498,6 +558,7 @@ export async function POST(request: NextRequest) {
         savedLogId = rows[0].id;
         const share_id = rows[0].share_id;
         const short_id = rows[0].short_id;
+        logStep(requestId, "web", "SAVED", { savedLogId, share_id, short_id, imageUrl });
         return NextResponse.json({ foods, summary, savedLogId, share_id, short_id, is_ambiguous });
       }
     } catch (e) {
@@ -520,6 +581,11 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     console.error("=== API Analysis Error ===", e);
     const err = e as { status?: number; message?: string; name?: string; stack?: string };
+
+    logStep(requestId, "web", "ERROR", {
+      errorName: err.name,
+      errorMessage: err.message,
+    });
 
     await logErrorAndNotify("画像の解析", e, { useGemini: !!process.env.GEMINI_API_KEY });
 
