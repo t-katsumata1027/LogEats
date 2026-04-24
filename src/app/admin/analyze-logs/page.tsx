@@ -62,9 +62,10 @@ async function fetchStepsForRequest(requestId: string) {
 export default async function AdminAnalyzeLogsPage({
     searchParams,
 }: {
-    searchParams?: { request_id?: string };
+    searchParams?: Promise<{ request_id?: string }>;
 }) {
-    const selectedId = searchParams?.request_id ?? null;
+    const params = await searchParams;
+    const selectedId = params?.request_id ?? null;
     const requests = await fetchRequests();
     const detail = selectedId ? await fetchStepsForRequest(selectedId) : [];
 
