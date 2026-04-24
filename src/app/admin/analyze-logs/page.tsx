@@ -4,6 +4,7 @@ import { sql } from "@vercel/postgres";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Activity, MigrateButton } from "./AnalyzeLogsClient";
+import { unstable_noStore as noStore } from "next/cache";
 
 const STEP_BADGE: Record<string, { label: string; color: string }> = {
     START:                   { label: "開始",         color: "bg-slate-100 text-slate-700 border-slate-200" },
@@ -24,7 +25,8 @@ const SOURCE_BADGE: Record<string, string> = {
     line: "bg-green-500 text-white",
 };
 
-async function fetchRequests(): Promise<{ request_id: string; source: string; created_at: Date; steps: number; has_error: boolean; summary_data: any }[]> {
+async function fetchRequests(): Promise<{ data: any[]; error: string | null }> {
+    noStore();
     try {
         const { rows } = await sql`
             SELECT
@@ -33,19 +35,21 @@ async function fetchRequests(): Promise<{ request_id: string; source: string; cr
                 MIN(created_at)   AS created_at,
                 COUNT(*)          AS steps,
                 BOOL_OR(step = 'ERROR') AS has_error,
-                MAX(CASE WHEN step = 'SUMMARY' THEN data ELSE NULL END) AS summary_data
+                (MAX(CASE WHEN step = 'SUMMARY' THEN data::text ELSE NULL END))::jsonb AS summary_data
             FROM analyze_logs
             GROUP BY request_id, source
             ORDER BY MIN(created_at) DESC
             LIMIT 100
         `;
-        return rows as any[];
-    } catch {
-        return [];
+        return { data: rows, error: null };
+    } catch (e: any) {
+        console.error("fetchRequests Error:", e);
+        return { data: [], error: e.message };
     }
 }
 
-async function fetchStepsForRequest(requestId: string) {
+async function fetchStepsForRequest(requestId: string): Promise<{ data: any[]; error: string | null }> {
+    noStore();
     try {
         const { rows } = await sql`
             SELECT step, data, created_at
@@ -53,9 +57,10 @@ async function fetchStepsForRequest(requestId: string) {
             WHERE request_id = ${requestId}
             ORDER BY created_at ASC
         `;
-        return rows;
-    } catch {
-        return [];
+        return { data: rows, error: null };
+    } catch (e: any) {
+        console.error("fetchSteps Error:", e);
+        return { data: [], error: e.message };
     }
 }
 
@@ -66,10 +71,8 @@ export default async function AdminAnalyzeLogsPage({
 }) {
     const params = await searchParams;
     const selectedId = params?.request_id ?? null;
-    const requests = await fetchRequests();
-    const detail = selectedId ? await fetchStepsForRequest(selectedId) : [];
-
-    const tableExists = requests !== null;
+    const { data: requests, error: requestsError } = await fetchRequests();
+    const { data: detail, error: detailError } = selectedId ? await fetchStepsForRequest(selectedId) : { data: [], error: null };
 
     return (
         <div className="space-y-6">
@@ -81,6 +84,13 @@ export default async function AdminAnalyzeLogsPage({
                 </h2>
                 <MigrateButton />
             </div>
+
+            {(requestsError || detailError) && (
+                <div className="bg-red-50 border border-red-200 p-4 rounded-xl text-red-700 text-sm">
+                    <p className="font-bold mb-1">⚠️ データベースエラー</p>
+                    <p className="font-mono text-xs">{requestsError || detailError}</p>
+                </div>
+            )}
 
             {requests.length === 0 ? (
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-sage-100 text-center">
@@ -98,7 +108,6 @@ export default async function AdminAnalyzeLogsPage({
                             直近{requests.length}件のリクエスト
                         </p>
                         {requests.map((req) => {
-                            const badge = STEP_BADGE;
                             const summary = req.summary_data;
                             const isSelected = selectedId === req.request_id;
                             return (
@@ -151,7 +160,7 @@ export default async function AdminAnalyzeLogsPage({
                             </div>
                         ) : detail.length === 0 ? (
                             <div className="bg-white rounded-2xl border border-sage-100 p-8 text-center text-sage-400">
-                                ステップデータが見つかりません
+                                {detailError ? "エラーが発生したため表示できません" : "ステップデータが見つかりません"}
                             </div>
                         ) : (
                             <div className="space-y-3">
