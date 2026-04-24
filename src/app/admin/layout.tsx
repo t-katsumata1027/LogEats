@@ -1,7 +1,7 @@
 import { getCurrentUserEmail } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Users, FileText, AlertTriangle, ArrowLeft, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, FileText, AlertTriangle, ArrowLeft, Megaphone, Microscope } from "lucide-react";
 
 export default async function AdminLayout({
     children,
@@ -33,6 +33,10 @@ export default async function AdminLayout({
                             <FileText className="w-5 h-5" />
                             <span>食事記録</span>
                         </Link>
+                        <Link href="/admin/analyze-logs" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-sage-100 text-violet-700 transition-colors">
+                            <Microscope className="w-5 h-5" />
+                            <span>解析ログ</span>
+                        </Link>
                         <Link href="/admin/affiliates" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-sage-100 text-sage-700 transition-colors">
                             <Megaphone className="w-5 h-5" />
                             <span>広告管理</span>
@@ -63,6 +67,10 @@ export default async function AdminLayout({
                 <Link href="/admin/logs" className="flex flex-col items-center p-2 text-sage-600">
                     <FileText className="w-5 h-5" />
                     <span className="text-[10px] mt-1">記録</span>
+                </Link>
+                <Link href="/admin/analyze-logs" className="flex flex-col items-center p-2 text-violet-600">
+                    <Microscope className="w-5 h-5" />
+                    <span className="text-[10px] mt-1">解析Log</span>
                 </Link>
                 <Link href="/admin/affiliates" className="flex flex-col items-center p-2 text-sage-600">
                     <Megaphone className="w-5 h-5" />
