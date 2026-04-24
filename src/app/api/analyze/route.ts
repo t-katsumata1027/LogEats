@@ -339,7 +339,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "画像ファイルを送信してください。" }, { status: 400 });
     }
 
-    logStep(requestId, "web", "START", {
+    await logStep(requestId, "web", "START", {
       aiProvider: useGemini ? "gemini" : "openai",
       imageSizeBytes: (image as Blob).size,
       mealType: formData.get("meal_type") ?? "unknown",
@@ -353,7 +353,7 @@ export async function POST(request: NextRequest) {
       ? await recognizeWithGemini(base64)
       : await recognizeWithOpenAI(base64);
 
-    logStep(requestId, "web", "AI_RECOGNITION_RESULT", {
+    await logStep(requestId, "web", "AI_RECOGNITION_RESULT", {
       is_ambiguous,
       recognizedCount: recognizedRaw.length,
       foods: recognizedRaw.map((f) => ({
@@ -376,7 +376,7 @@ export async function POST(request: NextRequest) {
         typeof label_nutrition.fat === "number" &&
         typeof label_nutrition.carbs === "number"
       ) {
-        logStep(requestId, "web", "LABEL_BYPASS", {
+        await logStep(requestId, "web", "LABEL_BYPASS", {
           name,
           amount,
           label_nutrition,
@@ -398,16 +398,16 @@ export async function POST(request: NextRequest) {
 
       // DBにない場合はAIでグラム単位の推定を実行
       if (!masterRecord) {
-        logStep(requestId, "web", "DB_LOOKUP_MISS", { name, amount });
+        await logStep(requestId, "web", "DB_LOOKUP_MISS", { name, amount });
         masterRecord = await estimateNutritionWithAI(name, amount);
-        logStep(requestId, "web", "AI_ESTIMATION_RESULT", {
+        await logStep(requestId, "web", "AI_ESTIMATION_RESULT", {
           name,
           amount,
           masterRecord,
         });
         await addLearnedFood(name, masterRecord);
       } else {
-        logStep(requestId, "web", "DB_LOOKUP_HIT", { name, masterRecord });
+        await logStep(requestId, "web", "DB_LOOKUP_HIT", { name, masterRecord });
       }
 
       // TODO: 実際のアプリでは "amount" の文字列から重量をさらに調整等が可能
@@ -424,7 +424,7 @@ export async function POST(request: NextRequest) {
           if (!isNaN(parsed) && parsed > 0) {
             const prevWeight = weightG;
             weightG = parsed;
-            logStep(requestId, "web", "WEIGHT_OVERRIDE", {
+            await logStep(requestId, "web", "WEIGHT_OVERRIDE", {
               name,
               amountString: amount,
               prevWeightG: prevWeight,
@@ -443,7 +443,7 @@ export async function POST(request: NextRequest) {
       // 検算ロジックのアトウォーター係数を適用して全体のカロリーを算出
       const validatedCalories = validateAndCalculateCalories(initialProtein, initialFat, initialCarbs);
 
-      logStep(requestId, "web", "FOOD_CALC", {
+      await logStep(requestId, "web", "FOOD_CALC", {
         name,
         amount,
         weightG,
@@ -476,7 +476,7 @@ export async function POST(request: NextRequest) {
 
     const summary = buildSummary(foods);
 
-    logStep(requestId, "web", "SUMMARY", {
+    await logStep(requestId, "web", "SUMMARY", {
       totalCalories: summary.totalCalories,
       totalProtein: summary.totalProtein,
       totalFat: summary.totalFat,
@@ -558,7 +558,7 @@ export async function POST(request: NextRequest) {
         savedLogId = rows[0].id;
         const share_id = rows[0].share_id;
         const short_id = rows[0].short_id;
-        logStep(requestId, "web", "SAVED", { savedLogId, share_id, short_id, imageUrl });
+        await logStep(requestId, "web", "SAVED", { savedLogId, share_id, short_id, imageUrl });
         return NextResponse.json({ foods, summary, savedLogId, share_id, short_id, is_ambiguous });
       }
     } catch (e) {
@@ -582,7 +582,7 @@ export async function POST(request: NextRequest) {
     console.error("=== API Analysis Error ===", e);
     const err = e as { status?: number; message?: string; name?: string; stack?: string };
 
-    logStep(requestId, "web", "ERROR", {
+    await logStep(requestId, "web", "ERROR", {
       errorName: err.name,
       errorMessage: err.message,
     });

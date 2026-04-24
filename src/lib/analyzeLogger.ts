@@ -52,21 +52,25 @@ async function saveStepToDb(
       INSERT INTO analyze_logs (request_id, source, step, data)
       VALUES (${requestId}, ${source}, ${step}, ${JSON.stringify(data)})
     `;
-  } catch {
-    // analyze_logs テーブルが存在しない場合やDBエラーは無視して続行
+  } catch (e) {
+    // analyze_logs テーブルが存在しない場合やDBエラーはコンソールにのみ記録
+    console.warn("[ANALYZE] saveStepToDb failed:", e instanceof Error ? e.message : String(e));
   }
 }
 
 /**
- * 構造化ログを console.log に出力し、DBにはバックグラウンド保存する。
- * Vercel のランタイムログで `[ANALYZE]` プレフィックスでフィルタリング可能。
+ * 構造化ログを console.log に出力し、DBに await で確実に保存する。
+ *
+ * ⚠️ Vercel サーバーレスではレスポンス返却後にプロセスが終了するため、
+ * fire-and-forget ではなく await で保存を完了させる必要がある。
+ * 呼び出し側は必ず `await logStep(...)` とすること。
  */
-export function logStep(
+export async function logStep(
   requestId: string,
   source: "web" | "line",
   step: AnalyzeStep,
   data: Record<string, unknown>
-): void {
+): Promise<void> {
   const entry: AnalyzeLogEntry = {
     requestId,
     ts: new Date().toISOString(),
@@ -76,6 +80,6 @@ export function logStep(
   };
   // プレフィックスを付けることで Vercel ログ上での grep が容易に
   console.log(`[ANALYZE] ${JSON.stringify(entry)}`);
-  // DBへの保存は非同期で実行（解析処理をブロックしない）
-  saveStepToDb(requestId, source, step, { ...data, ts: entry.ts });
+  // await で確実にDB保存してからリターン（fire-and-forget は使わない）
+  await saveStepToDb(requestId, source, step, { ...data, ts: entry.ts });
 }

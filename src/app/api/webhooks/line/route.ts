@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
                         // Gemini/OpenAIによる解析
                         const requestId = createRequestId();
                         const useGemini = !!process.env.GEMINI_API_KEY;
-                        logStep(requestId, "line", "START", {
+                        await logStep(requestId, "line", "START", {
                             lineUserId,
                             aiProvider: useGemini ? "gemini" : "openai",
                         });
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
                             ? await recognizeWithGemini(base64)
                             : await recognizeWithOpenAI(base64);
 
-                        logStep(requestId, "line", "AI_RECOGNITION_RESULT", {
+                        await logStep(requestId, "line", "AI_RECOGNITION_RESULT", {
                             is_ambiguous,
                             recognizedCount: recognizedRaw.length,
                             foods: recognizedRaw.map((f) => ({
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
                                 typeof label_nutrition.fat === "number" &&
                                 typeof label_nutrition.carbs === "number"
                             ) {
-                                logStep(requestId, "line", "LABEL_BYPASS", { name, amount, label_nutrition });
+                                await logStep(requestId, "line", "LABEL_BYPASS", { name, amount, label_nutrition });
                                 foods.push({
                                     name,
                                     nameJa: name,
@@ -176,12 +176,12 @@ export async function POST(req: NextRequest) {
                             let masterRecord = lookupFoodMasterWithLearned(name, learned);
 
                             if (!masterRecord) {
-                                logStep(requestId, "line", "DB_LOOKUP_MISS", { name, amount });
+                                await logStep(requestId, "line", "DB_LOOKUP_MISS", { name, amount });
                                 masterRecord = await estimateNutritionWithAI(name, amount);
-                                logStep(requestId, "line", "AI_ESTIMATION_RESULT", { name, amount, masterRecord });
+                                await logStep(requestId, "line", "AI_ESTIMATION_RESULT", { name, amount, masterRecord });
                                 await addLearnedFood(name, masterRecord);
                             } else {
-                                logStep(requestId, "line", "DB_LOOKUP_HIT", { name, masterRecord });
+                                await logStep(requestId, "line", "DB_LOOKUP_HIT", { name, masterRecord });
                             }
 
                             let weightG = masterRecord.standard_weight_g;
@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
                                     if (!isNaN(parsed) && parsed > 0) {
                                         const prevWeight = weightG;
                                         weightG = parsed;
-                                        logStep(requestId, "line", "WEIGHT_OVERRIDE", {
+                                        await logStep(requestId, "line", "WEIGHT_OVERRIDE", {
                                             name,
                                             amountString: amount,
                                             prevWeightG: prevWeight,
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
                             const initialCarbs = masterRecord.per_100g.carbs * ratio;
                             const validatedCalories = validateAndCalculateCalories(initialProtein, initialFat, initialCarbs);
 
-                            logStep(requestId, "line", "FOOD_CALC", {
+                            await logStep(requestId, "line", "FOOD_CALC", {
                                 name,
                                 amount,
                                 weightG,
@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
 
                         const summary = buildSummary(foods);
 
-                        logStep(requestId, "line", "SUMMARY", {
+                        await logStep(requestId, "line", "SUMMARY", {
                             totalCalories: summary.totalCalories,
                             totalProtein: summary.totalProtein,
                             totalFat: summary.totalFat,
