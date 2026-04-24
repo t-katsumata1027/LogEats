@@ -38,3 +38,6 @@ yarn-error.log*
 
 # Temporary scratch files
 /scratch/
+
+# clerk configuration (can include secrets)
+/.clerk/
