@@ -136,7 +136,9 @@ export default async function SharePage({ params }: SharePageProps) {
           <NutritionResult 
             foods={foods} 
             summary={summary} 
-            isLoggedIn={false} 
+            isLoggedIn={false}
+            share_id={log.share_id}
+            short_id={log.short_id}
           />
 
           <AffiliateBanner />

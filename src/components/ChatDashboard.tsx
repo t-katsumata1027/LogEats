@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import type { AnalyzedFood } from "@/lib/types";
 import { AffiliateBanner } from "@/components/AffiliateBanner";
 
@@ -488,15 +489,17 @@ export function ChatDashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
                                     <div className={`chat-bubble shadow-sm bg-sage-600 text-white ${msg.type === "image" ? "p-1.5" : "text-sm"}`}>
                                         {msg.type === "text" && msg.content}
                                         {msg.type === "image" && (
-                                            <img src={msg.imageUrl} className="max-w-[200px] sm:max-w-[240px] h-auto rounded-xl object-cover block" alt="Uploaded" />
+                                            <div className="relative w-[200px] sm:w-[240px] aspect-square rounded-xl overflow-hidden block">
+                                                <Image src={msg.imageUrl!} fill className="object-cover" alt="Uploaded" sizes="(max-width: 640px) 200px, 240px" />
+                                            </div>
                                         )}
                                     </div>
                                 </div>
                             ) : (
                                 <div className={`chat chat-start animate-fade-in-up`}>
                                     <div className={`chat-image avatar row-start-2 place-self-start mt-0.5 ${isConsecutiveBot ? 'invisible' : ''}`}>
-                                        <div className="w-10 h-10 rounded-full border border-sage-200 shadow-sm overflow-hidden bg-white">
-                                            <img src="/ai-bot.png" alt="AI Agent" className="w-full h-full object-cover scale-110" />
+                                        <div className="w-10 h-10 rounded-full border border-sage-200 shadow-sm overflow-hidden bg-white relative">
+                                            <Image src="/ai-bot.png" alt="AI Agent" fill className="object-cover scale-110" sizes="40px" />
                                         </div>
                                     </div>
 

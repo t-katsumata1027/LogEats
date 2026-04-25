@@ -488,8 +488,8 @@ export async function POST(request: NextRequest) {
     const userId = await getDbUserId();
     let imageUrl = null;
     let savedLogId = null;
-    let shareId = null;
-    const shortIdValue = generateShortId();
+    let share_id = null;
+    let short_id = generateShortId();
 
     // 1. 画像をVercel Blobへアップロード (public access)
     try {
@@ -533,7 +533,7 @@ export async function POST(request: NextRequest) {
             ${JSON.stringify({ foods })},
             ${safeMealType},
             ${loggedAtValue},
-            ${shortIdValue}
+            ${short_id}
           )
           RETURNING id, share_id, short_id;
         `
@@ -550,14 +550,14 @@ export async function POST(request: NextRequest) {
             ${summary.totalCarbs}, 
             ${JSON.stringify({ foods })},
             ${safeMealType},
-            ${shortIdValue}
+            ${short_id}
           )
           RETURNING id, share_id, short_id;
         `;
       if (rows.length > 0) {
         savedLogId = rows[0].id;
-        const share_id = rows[0].share_id;
-        const short_id = rows[0].short_id;
+        share_id = rows[0].share_id;
+        short_id = rows[0].short_id;
         await logStep(requestId, "web", "SAVED", { savedLogId, share_id, short_id, imageUrl });
         return NextResponse.json({ foods, summary, savedLogId, share_id, short_id, is_ambiguous });
       }
@@ -577,7 +577,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ foods, summary, savedLogId, share_id: shareId, short_id: shortIdValue, is_ambiguous });
+    return NextResponse.json({ foods, summary, savedLogId, share_id, short_id, is_ambiguous });
   } catch (e) {
     console.error("=== API Analysis Error ===", e);
     const err = e as { status?: number; message?: string; name?: string; stack?: string };

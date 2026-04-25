@@ -344,8 +344,8 @@ export async function POST(request: NextRequest) {
         `;
 
     const savedLogId = rows[0]?.id ?? null;
-    const shareId = rows[0]?.share_id ?? null;
-    const shortId = rows[0]?.short_id ?? null;
+    const share_id = rows[0]?.share_id ?? null;
+    const short_id = rows[0]?.short_id ?? null;
 
     if (!userId) {
       // 未ログイン状態の場合はアクセスログのみ記録
@@ -362,8 +362,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       savedLogId,
-      share_id: shareId,
-      short_id: shortId,
+      share_id: share_id,
+      short_id: short_id,
       foods,
       totalCalories,
       totalProtein,

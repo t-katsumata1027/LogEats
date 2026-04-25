@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 import { ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import Image from "next/image";
 import { WeeklyChart } from "@/components/WeeklyChart";
 import { AdBanner } from "@/components/AdBanner";
 import { AffiliateBanner } from "@/components/AffiliateBanner";
@@ -853,9 +854,9 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                             className="card card-compact bg-base-100 border border-sage-100 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                                             onClick={() => openModal(log)}
                                         >
-                                            <figure className="h-32 bg-sage-50 relative w-full">
+                                            <figure className="h-32 bg-sage-50 relative w-full overflow-hidden">
                                                 {log.image_url ? (
-                                                    <img src={log.image_url} alt="Meal" className="absolute inset-0 w-full h-full object-cover" />
+                                                    <Image src={log.image_url} alt="Meal" fill className="object-cover" sizes="(max-width: 640px) 100vw, 340px" />
                                                 ) : (
                                                     <span className="text-2xl text-sage-400">🍽️</span>
                                                 )}
@@ -1005,9 +1006,9 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     {selectedLog && (
                         <>
                             {/* ヘッダー画像部分 */}
-                            <div className="relative h-48 bg-sage-50 shrink-0">
+                            <div className="relative h-48 bg-sage-50 shrink-0 overflow-hidden">
                                 {selectedLog.image_url ? (
-                                    <img src={selectedLog.image_url} alt="Meal" className="absolute inset-0 w-full h-full object-cover" />
+                                    <Image src={selectedLog.image_url} alt="Meal" fill className="object-cover" sizes="(max-width: 640px) 100vw, 448px" priority />
                                 ) : (
                                     <div className="absolute inset-0 flex items-center justify-center">
                                         <span className="text-4xl text-sage-400">🍽️</span>

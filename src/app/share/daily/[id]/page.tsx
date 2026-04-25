@@ -1,6 +1,7 @@
 import { sql } from "@vercel/postgres";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Metadata } from "next";
 import { NutritionSummary } from "@/lib/types";
 
@@ -175,7 +176,7 @@ export default async function DailySharePage({ params }: DailySharePageProps) {
                   <div key={log.id} className="flex gap-4 p-4 rounded-2xl border border-sage-100 bg-white hover:border-sage-200 transition-all shadow-sm">
                     {log.image_url ? (
                       <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 shadow-sm">
-                        <img src={log.image_url} alt="" className="object-cover w-full h-full" />
+                        <Image src={log.image_url} alt="" fill className="object-cover" sizes="80px" />
                       </div>
                     ) : (
                       <div className="w-20 h-20 rounded-xl bg-sage-50 flex items-center justify-center text-2xl shrink-0 border border-sage-100">

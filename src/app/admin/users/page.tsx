@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { sql } from "@vercel/postgres";
 import { format } from "date-fns";
+import Image from "next/image";
 
 export default async function AdminUsersPage() {
     const { rows: users } = await sql`
@@ -33,8 +34,8 @@ export default async function AdminUsersPage() {
                                         <div className="flex items-center gap-3">
                                             {user.image && (
                                                 <div className="avatar">
-                                                    <div className="w-8 h-8 rounded-full">
-                                                        <img src={user.image} alt={user.name || "User"} />
+                                                    <div className="w-8 h-8 rounded-full overflow-hidden relative">
+                                                        <Image src={user.image} alt={user.name || "User"} fill className="object-cover" sizes="32px" />
                                                     </div>
                                                 </div>
                                             )}

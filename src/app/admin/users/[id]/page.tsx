@@ -4,6 +4,7 @@ import { sql } from "@vercel/postgres";
 import { format } from "date-fns";
 import { ArrowLeft, User as UserIcon, Calendar, Image as ImageIcon, Clock, MousePointerClick, Eye } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 export default async function AdminUserDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -58,9 +59,9 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-sage-100 flex flex-col md:flex-row items-start md:items-center gap-6 justify-between">
                 <div className="flex items-center gap-6">
                     <div className="avatar">
-                        <div className="w-20 h-20 rounded-full bg-sage-100 flex items-center justify-center text-sage-400">
+                        <div className="w-20 h-20 rounded-full bg-sage-100 flex items-center justify-center text-sage-400 overflow-hidden relative">
                             {user.image ? (
-                                <img src={user.image} alt={user.name || "User"} />
+                                <Image src={user.image} alt={user.name || "User"} fill className="object-cover" sizes="80px" />
                             ) : (
                                 <UserIcon className="w-10 h-10" />
                             )}
@@ -134,7 +135,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
                                     {/* Image Section */}
                                     <div className="w-full md:w-64 h-48 bg-white border border-sage-100 rounded-xl overflow-hidden flex-shrink-0 relative shadow-sm">
                                         {log.image_url ? (
-                                            <img src={log.image_url} alt="Meal" className="w-full h-full object-cover relative z-10" />
+                                            <Image src={log.image_url} alt="Meal" fill className="object-cover relative z-10" sizes="(max-width: 768px) 100vw, 256px" />
                                         ) : (
                                             <div className="w-full h-full flex flex-col justify-center items-center text-sage-400">
                                                 <ImageIcon className="w-8 h-8 mb-2 opacity-30" />

@@ -5,6 +5,7 @@ import { getDbUserId } from "@/auth";
 import { SettingsForm } from "@/components/SettingsForm";
 import { LineConnectionSettings } from "@/components/LineConnectionSettings";
 import Link from "next/link";
+import Image from "next/image";
 
 export default async function SettingsPage() {
     const user = await currentUser();
@@ -41,7 +42,9 @@ export default async function SettingsPage() {
                         <div className="bg-white rounded-2xl p-6 border border-sage-100 shadow-sm flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 {user.imageUrl ? (
-                                    <img src={user.imageUrl} alt="Profile" className="w-16 h-16 rounded-full ring-2 ring-sage-100" />
+                                    <div className="relative w-16 h-16 rounded-full ring-2 ring-sage-100 overflow-hidden">
+                                        <Image src={user.imageUrl} alt="Profile" fill className="object-cover" sizes="64px" />
+                                    </div>
                                 ) : (
                                     <div className="w-16 h-16 rounded-full bg-sage-100 flex items-center justify-center text-2xl">👤</div>
                                 )}
