@@ -45,7 +45,7 @@ const db: { keys: string[]; data: FoodMasterRecord }[] = [
   { keys: ["味噌汁", "みそ汁", "miso soup"], data: { unit_name: "1杯", standard_weight_g: 200, per_100g: { calories: 20, protein: 1.5, fat: 0.6, carbs: 2.5 } } },
 ];
 
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return s
     .toLowerCase()
     .replace(/\s+/g, "")
@@ -137,10 +137,22 @@ export function lookupFoodMaster(name: string): FoodMasterRecord | null {
  * 静的DB ＋ 学習済みマップ からマスターデータを取得
  */
 export function lookupFoodMasterWithLearned(name: string, learned: Record<string, FoodMasterRecord>): FoodMasterRecord | null {
-  const fromStatic = lookupFoodMaster(name);
-  if (fromStatic) return fromStatic;
-  const key = normalize(name.trim());
-  return learned[key] ?? null;
+  if (!name || name.trim().length < 2) return null;
+  const n = normalize(name.trim());
+  
+  // 1. 学習済み食品から検索（完全一致）
+  if (learned[n]) return learned[n];
+
+  // 2. 学習済み食品から検索（部分一致）
+  // 3500件程度であればループで回しても十分に高速
+  for (const [key, record] of Object.entries(learned)) {
+    if (key.includes(n) || n.includes(key)) {
+      return record;
+    }
+  }
+
+  // 3. 静的DBから検索（フォールバック）
+  return lookupFoodMaster(name);
 }
 
 /**

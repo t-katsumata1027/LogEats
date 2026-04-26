@@ -371,21 +371,37 @@ export async function POST(request: NextRequest) {
       // ラベルから栄養素が取得できた場合はフェーズ2（DB参照・AI推計）をバイパスする
       if (
         label_nutrition &&
-        typeof label_nutrition.calories === "number" &&
         typeof label_nutrition.protein === "number" &&
         typeof label_nutrition.fat === "number" &&
         typeof label_nutrition.carbs === "number"
       ) {
+        // カロリーが読み取れなかった(0)場合や、PFCとの不整合を防ぐため常に再計算値を算出
+        const calculatedCalories = validateAndCalculateCalories(
+          label_nutrition.protein,
+          label_nutrition.fat,
+          label_nutrition.carbs
+        );
+        
+        // ラベルから直接読み取ったカロリー（0より大きい場合）と、PFCから計算したカロリーを比較
+        // 基本的にはPFCから算出した値を信頼しつつ、ラベルに記載がある場合はそちらを優先する
+        // ただしラベルが0の場合は確実に再計算値を使用する
+        const finalCalories = (label_nutrition.calories > 0) 
+          ? Math.round(label_nutrition.calories) 
+          : Math.round(calculatedCalories);
+
         await logStep(requestId, "web", "LABEL_BYPASS", {
           name,
           amount,
           label_nutrition,
+          calculatedCalories,
+          finalCalories
         });
+
         foods.push({
           name,
           nameJa: name,
           amount: amount || "1個",
-          calories: Math.round(label_nutrition.calories),
+          calories: finalCalories,
           protein: Math.round(label_nutrition.protein * 10) / 10,
           fat: Math.round(label_nutrition.fat * 10) / 10,
           carbs: Math.round(label_nutrition.carbs * 10) / 10,
