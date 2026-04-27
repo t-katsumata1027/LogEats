@@ -364,12 +364,18 @@ export async function POST(request: NextRequest) {
 
     for (const { name, amount, label_nutrition } of recognizedRaw) {
       // ラベルから栄養素が取得できた場合はフェーズ2（DB参照・AI推計）をバイパスする
+      if (
+        label_nutrition &&
+        typeof label_nutrition.protein === "number" &&
+        typeof label_nutrition.fat === "number" &&
+        typeof label_nutrition.carbs === "number"
+      ) {
         // 栄養素のバリデーションと修正
         const initialFood: AnalyzedFood = {
           name,
           nameJa: name,
           amount: amount || "1個",
-          calories: Math.round(label_nutrition.calories),
+          calories: Math.round(label_nutrition.calories || 0),
           protein: Math.round(label_nutrition.protein * 10) / 10,
           fat: Math.round(label_nutrition.fat * 10) / 10,
           carbs: Math.round(label_nutrition.carbs * 10) / 10,
