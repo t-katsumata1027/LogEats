@@ -3,13 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 export const maxDuration = 60; // Vercel ホスティングにおけるAPIタイムアウトを最大化 (Proの場合は300など可能)
 
 import OpenAI from "openai";
-import {
-  lookupFoodMasterWithLearned,
-  loadLearnedFoods,
-  addLearnedFood,
-  defaultFoodMaster,
-  type FoodMasterRecord,
-} from "@/lib/foodDatabase";
+import { lookupFoodMasterWithLearned, loadLearnedFoods, addLearnedFood, defaultFoodMaster, type FoodMasterRecord } from "@/lib/foodDatabase";
+import { sanitizeNutrition, calculateAtwaterCalories } from "@/lib/nutrition";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 import { getDbUserId } from "@/auth";
 import { put } from "@vercel/blob";
@@ -288,7 +283,7 @@ export async function estimateNutritionWithAI(foodName: string, amountStr?: stri
 
 /** カロリー検算（P: 4kcal/g, F: 9kcal/g, C: 4kcal/g） */
 export function validateAndCalculateCalories(protein: number, fat: number, carbs: number): number {
-  return (protein * 4) + (fat * 9) + (carbs * 4);
+  return calculateAtwaterCalories(protein, fat, carbs);
 }
 
 export function buildSummary(foods: AnalyzedFood[]): NutritionSummary {
@@ -369,44 +364,37 @@ export async function POST(request: NextRequest) {
 
     for (const { name, amount, label_nutrition } of recognizedRaw) {
       // ラベルから栄養素が取得できた場合はフェーズ2（DB参照・AI推計）をバイパスする
-      if (
-        label_nutrition &&
-        typeof label_nutrition.protein === "number" &&
-        typeof label_nutrition.fat === "number" &&
-        typeof label_nutrition.carbs === "number"
-      ) {
-        // カロリーが読み取れなかった(0)場合や、PFCとの不整合を防ぐため常に再計算値を算出
-        const calculatedCalories = validateAndCalculateCalories(
-          label_nutrition.protein,
-          label_nutrition.fat,
-          label_nutrition.carbs
-        );
-        
-        // ラベルから直接読み取ったカロリー（0より大きい場合）と、PFCから計算したカロリーを比較
-        // 基本的にはPFCから算出した値を信頼しつつ、ラベルに記載がある場合はそちらを優先する
-        // ただしラベルが0の場合は確実に再計算値を使用する
-        const finalCalories = (label_nutrition.calories > 0) 
-          ? Math.round(label_nutrition.calories) 
-          : Math.round(calculatedCalories);
+        // 栄養素のバリデーションと修正
+        const initialFood: AnalyzedFood = {
+          name,
+          nameJa: name,
+          amount: amount || "1個",
+          calories: Math.round(label_nutrition.calories),
+          protein: Math.round(label_nutrition.protein * 10) / 10,
+          fat: Math.round(label_nutrition.fat * 10) / 10,
+          carbs: Math.round(label_nutrition.carbs * 10) / 10,
+          label_nutrition,
+        };
+
+        const { food: correctedFood, isCorrected, reason } = sanitizeNutrition(initialFood);
+
+        if (isCorrected) {
+          await logStep(requestId, "web", "NUTRITION_CORRECTED", {
+            name,
+            original: initialFood.calories,
+            corrected: correctedFood.calories,
+            reason
+          });
+        }
 
         await logStep(requestId, "web", "LABEL_BYPASS", {
           name,
           amount,
           label_nutrition,
-          calculatedCalories,
-          finalCalories
+          finalCalories: correctedFood.calories
         });
 
-        foods.push({
-          name,
-          nameJa: name,
-          amount: amount || "1個",
-          calories: finalCalories,
-          protein: Math.round(label_nutrition.protein * 10) / 10,
-          fat: Math.round(label_nutrition.fat * 10) / 10,
-          carbs: Math.round(label_nutrition.carbs * 10) / 10,
-          label_nutrition,
-        });
+        foods.push(correctedFood);
         continue;
       }
 

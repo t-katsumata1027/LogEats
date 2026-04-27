@@ -20,6 +20,7 @@ export type AnalyzeStep =
   | "AI_ESTIMATION_RESULT"
   | "WEIGHT_OVERRIDE"
   | "FOOD_CALC"
+  | "NUTRITION_CORRECTED"
   | "SUMMARY"
   | "SAVED"
   | "ERROR";

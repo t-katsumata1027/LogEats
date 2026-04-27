@@ -13,6 +13,7 @@ import {
     arrayBufferToBase64
 } from "@/app/api/analyze/route";
 import { lookupFoodMasterWithLearned, loadLearnedFoods, addLearnedFood } from "@/lib/foodDatabase";
+import { sanitizeNutrition } from "@/lib/nutrition";
 import type { AnalyzedFood } from "@/lib/types";
 import { createRequestId, logStep } from "@/lib/analyzeLogger";
 
@@ -154,22 +155,40 @@ export async function POST(req: NextRequest) {
                             // ラベルから栄養素が取得できた場合はフェーズ2（DB参照・AI推計）をバイパスする
                             if (
                                 label_nutrition &&
-                                typeof label_nutrition.calories === "number" &&
                                 typeof label_nutrition.protein === "number" &&
                                 typeof label_nutrition.fat === "number" &&
                                 typeof label_nutrition.carbs === "number"
                             ) {
-                                await logStep(requestId, "line", "LABEL_BYPASS", { name, amount, label_nutrition });
-                                foods.push({
+                                const initialFood: AnalyzedFood = {
                                     name,
                                     nameJa: name,
                                     amount: amount || "1個",
-                                    calories: Math.round(label_nutrition.calories),
+                                    calories: Math.round(label_nutrition.calories || 0),
                                     protein: Math.round(label_nutrition.protein * 10) / 10,
                                     fat: Math.round(label_nutrition.fat * 10) / 10,
                                     carbs: Math.round(label_nutrition.carbs * 10) / 10,
                                     label_nutrition,
+                                };
+
+                                const { food: correctedFood, isCorrected, reason } = sanitizeNutrition(initialFood);
+
+                                if (isCorrected) {
+                                    await logStep(requestId, "line", "NUTRITION_CORRECTED", {
+                                        name,
+                                        original: initialFood.calories,
+                                        corrected: correctedFood.calories,
+                                        reason
+                                    });
+                                }
+
+                                await logStep(requestId, "line", "LABEL_BYPASS", { 
+                                    name, 
+                                    amount, 
+                                    label_nutrition,
+                                    finalCalories: correctedFood.calories
                                 });
+                                
+                                foods.push(correctedFood);
                                 continue;
                             }
 
