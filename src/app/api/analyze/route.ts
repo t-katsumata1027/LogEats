@@ -165,7 +165,7 @@ export async function recognizeWithOpenAI(base64Image: string): Promise<{ foods:
 /** Google Gemini で写っている料理・食品リストを取得 */
 export async function recognizeWithGemini(base64Image: string): Promise<{ foods: { name: string; amount?: string; label_nutrition?: any }[], is_ambiguous?: boolean, reason?: string }> {
   const apiKey = process.env.GEMINI_API_KEY ?? "";
-  const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
 
   const res = await fetch(endpoint, {
     method: "POST",
@@ -226,7 +226,7 @@ export async function estimateNutritionWithAI(foodName: string, amountStr?: stri
   const useGemini = !!process.env.GEMINI_API_KEY;
   if (useGemini) {
     const apiKey = process.env.GEMINI_API_KEY ?? "";
-    const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
