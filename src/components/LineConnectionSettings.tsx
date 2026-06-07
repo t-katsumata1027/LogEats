@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useUser, useReverification } from "@clerk/nextjs";
 import { useState } from "react";
 
 export function LineConnectionSettings() {
@@ -15,7 +15,7 @@ export function LineConnectionSettings() {
         account => account.provider === ("oauth_line" as any)
     );
 
-    const handleConnectLine = async () => {
+    const handleConnectLine = useReverification(async () => {
         setIsLoading(true);
         setErrorMsg("");
         try {
@@ -34,7 +34,7 @@ export function LineConnectionSettings() {
         } finally {
             setIsLoading(false);
         }
-    };
+    });
 
     return (
         <div className="bg-white rounded-2xl p-6 md:p-8 border border-sage-100 shadow-sm mt-8">
