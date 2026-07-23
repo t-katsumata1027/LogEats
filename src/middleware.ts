@@ -5,6 +5,7 @@ const isPublicRoute = createRouteMatcher([
     '/api/logs/manual(.*)',    // 公開API（未ログインでも利用可）
     '/api/analyze(.*)',        // 公開API（未ログインでも利用可）
     '/api/track',              // 匿名ユーザーを含む行動計測
+    '/api/cron/daily-report',  // Vercel Cron。Route側のCRON_SECRETで認証
     '/api/webhooks/(.*)',      // ClerkやLINEのWebhook用ルート
     '/terms',
     '/privacy',
