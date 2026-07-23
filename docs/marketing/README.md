@@ -10,6 +10,8 @@
   - 優先度、担当、完了条件を含む実行タスクリスト
 - [AI_PR_AND_MULTI_AI_ORCHESTRATION.md](./AI_PR_AND_MULTI_AI_ORCHESTRATION.md)
   - 人物型AI広報、補助マスコット、SNS運用、マルチAIモデル選定、品質ゲート
+- [PHASE1_MEASUREMENT_SETUP.md](./PHASE1_MEASUREMENT_SETUP.md)
+  - `product_events`移行、GA4・GSC・Discord朝報に必要な設定と停止条件
 
 ## 監査証跡
 
@@ -32,4 +34,3 @@
 4. AI生成物は、事実、健康表現、広告表示、権利、個人情報を別モデルと人間で確認する。
 5. 初期30日間はSNSを自動公開しない。生成と審査を自動化し、公開は人間が承認する。
 6. モデル名、料金、提供状況は変化するため、実行時に各社公式情報とModels APIを再確認する。
-

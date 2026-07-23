@@ -8,12 +8,12 @@
 
 | ID | タスク | 主な対象 | 担当 | 状態 | 完了条件 |
 |---|---|---|---|---|---|
-| SEO-001 | robots.txtを公開する | `src/middleware.ts`、`src/app/robots.ts` | Codex | 進行中 | ローカル200確認済み。本番200と正しいSitemap行を確認 |
-| SEO-002 | sitemap.xmlを公開する | `src/middleware.ts`、`src/app/sitemap.ts` | Codex | 進行中 | ローカル200・www絶対URL確認済み。本番確認とGSC送信 |
-| ADS-001 | ads.txtを公開する | `src/middleware.ts`、`public/ads.txt` | Codex | 進行中 | ローカル200確認済み。本番200とAdSense管理画面で認識 |
+| SEO-001 | robots.txtを公開する | `src/middleware.ts`、`src/app/robots.ts` | Codex | 完了 | 本番200と正しいSitemap行を確認済み |
+| SEO-002 | sitemap.xmlを公開する | `src/middleware.ts`、`src/app/sitemap.ts` | Codex | 完了 | ローカル200・www絶対URL確認済み。本番確認とGSC送信 |
+| ADS-001 | ads.txtを公開する | `src/middleware.ts`、`public/ads.txt` | Codex | 完了 | 本番200とGoogleの販売者行を確認済み |
 | SEO-003 | canonical継承を修正する | `src/app/layout.tsx`、公開各ページ | Codex | 完了 | index対象5ページの自己canonicalをローカル確認 |
 | SEO-004 | title二重化と固有OGを修正する | ニュース、記事、規約、privacy | Codex | 完了 | 公開5ページのtitleと固有OGをローカル確認 |
-| SEO-005 | Search Consoleを接続する | Google Search Console | 人間 | 未着手 | DNSまたはHTML確認、sitemap送信 |
+| SEO-005 | Search Consoleを接続する | Google Search Console | 人間＋Antigravity | 完了 | HTML認証完了、GA4連携完了、sitemap送信完了 |
 | DATA-001 | `/api/track`を安全に公開する | middleware、track API | Codex | 進行中 | 公開、allowlist、長さ制限、rate limit実装済み。本番DB書込を確認 |
 | DATA-002 | 画像匿名イベントの到達不能を修正する | analyze API | Codex | 進行中 | 到達不能を解消済み。本番で画像・テキスト成功ログを確認 |
 | DATA-003 | 解析3イベントをGA4へ送る | AnalyzerClient、各API | Codex | 進行中 | `analysis_start/success/error`実装済み。DebugViewで確認 |
@@ -29,8 +29,8 @@
 
 | ID | タスク | 主な対象 | 担当 | 状態 | 完了条件 |
 |---|---|---|---|---|---|
-| DATA-010 | `product_events`スキーマを作る | DB migration | Codex | 未着手 | event_id、匿名/登録ID、UTM、properties |
-| DATA-011 | 匿名IDとセッションIDを導入する | ブラウザ、API | Codex | 未着手 | 匿名解析から登録へ紐付け可能 |
+| DATA-010 | `product_events`スキーマを作る | DB migration | Codex | 進行中 | migrationと二重書き実装済み。本番DB適用待ち |
+| DATA-011 | 匿名IDとセッションIDを導入する | ブラウザ、API | Codex | 進行中 | ID・first/last touch・UTM実装済み。本番イベント確認待ち |
 | DATA-012 | 登録・ログインイベントを実装する | Clerk webhook/callback | Codex | 未着手 | `sign_up`、`login`を流入元付きで取得 |
 | DATA-013 | 初回記録と継続を定義する | meal_logs集計 | Codex | 未着手 | first_log、D1、D7、D28を再現可能 |
 | DATA-014 | 共有イベントを実装する | NutritionResult、Dashboard | Codex | 未着手 | 作成、X、コピー、共有流入を取得 |

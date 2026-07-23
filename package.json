@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build"
+    "build": "next build",
+    "db:migrate:product-events": "node scripts/migrate-product-events.mjs"
   },
   "dependencies": {
     "@clerk/localizations": "^3.37.2",

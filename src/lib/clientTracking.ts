@@ -1,8 +1,17 @@
+import {
+  getClientAttribution,
+  type ClientAttribution,
+} from "@/lib/clientAttribution";
+
 export type TrackEventInput = {
   event_type: string;
   path: string;
   duration_ms?: number;
   action_detail?: string;
+};
+
+type TrackEventPayload = TrackEventInput & {
+  attribution: ClientAttribution;
 };
 
 declare global {
@@ -41,10 +50,19 @@ export function sendTrackEvent(
 ) {
   sendAnalyticsEvent(event);
 
+  if (typeof window === "undefined") {
+    return Promise.resolve();
+  }
+
+  const payload: TrackEventPayload = {
+    ...event,
+    attribution: getClientAttribution(),
+  };
+
   return fetch("/api/track", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(event),
+    body: JSON.stringify(payload),
     keepalive: options?.keepalive,
   }).catch(() => {
     // 計測失敗はユーザーの操作を妨げない
