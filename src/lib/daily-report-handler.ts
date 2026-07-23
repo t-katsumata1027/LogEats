@@ -247,7 +247,13 @@ class PostgresDailyReportExecutionStore
           COUNT(*) FILTER (WHERE pe.event_type = 'affiliate_click') AS clicks
         FROM product_events pe
         LEFT JOIN affiliate_banners b
-          ON b.id = CAST(NULLIF(COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id'), '') AS INTEGER)
+          ON b.id = CASE
+            WHEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id', '') ~ '^[0-9]{1,10}$'
+              THEN CASE
+                WHEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id')::numeric <= 2147483647
+                  THEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id')::integer
+              END
+          END
         WHERE pe.occurred_at >= ${startIso}::timestamptz
           AND pe.occurred_at < ${endIso}::timestamptz
           AND pe.event_type IN ('affiliate_impression', 'affiliate_click')
@@ -313,7 +319,13 @@ class PostgresDailyReportExecutionStore
         SELECT COUNT(*) AS inactive_count
         FROM product_events pe
         LEFT JOIN affiliate_banners b
-          ON b.id = CAST(NULLIF(COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id'), '') AS INTEGER)
+          ON b.id = CASE
+            WHEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id', '') ~ '^[0-9]{1,10}$'
+              THEN CASE
+                WHEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id')::numeric <= 2147483647
+                  THEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id')::integer
+              END
+          END
         WHERE pe.occurred_at >= ${startIso}::timestamptz
           AND pe.occurred_at < ${endIso}::timestamptz
           AND pe.event_type IN ('affiliate_impression', 'affiliate_click')

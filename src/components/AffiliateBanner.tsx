@@ -148,11 +148,18 @@ export function AffiliateBanner({ variant = 'card', className = '' }: AffiliateB
             const rect = currentContainer.getBoundingClientRect();
             const windowHeight = window.innerHeight || document.documentElement.clientHeight;
             const windowWidth = window.innerWidth || document.documentElement.clientWidth;
+            const visibleWidth = Math.max(
+                0,
+                Math.min(rect.right, windowWidth) - Math.max(rect.left, 0)
+            );
+            const visibleHeight = Math.max(
+                0,
+                Math.min(rect.bottom, windowHeight) - Math.max(rect.top, 0)
+            );
+            const elementArea = rect.width * rect.height;
             const isVisibleNow =
-                rect.top < windowHeight &&
-                rect.bottom > 0 &&
-                rect.left < windowWidth &&
-                rect.right > 0;
+                elementArea > 0 &&
+                (visibleWidth * visibleHeight) / elementArea >= 0.5;
 
             if (isIntersectingRef.current || isVisibleNow) {
                 timerRef.current = setTimeout(() => {
