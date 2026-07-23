@@ -1,29 +1,35 @@
-import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
+import { sql } from '@vercel/postgres';
 
 export async function GET() {
     try {
-        // 有効なバナーをすべて取得
+        // 有効なバナーの識別情報とコンテンツを取得
         const { rows } = await sql`
-            SELECT html_content FROM affiliate_banners 
+            SELECT
+                id,
+                name,
+                COALESCE(affiliate_network, 'a8') AS affiliate_network,
+                campaign_id,
+                creative_id,
+                target_domain,
+                html_content
+            FROM affiliate_banners
             WHERE is_active = true
         `;
 
-        if (!rows || rows.length === 0) {
+        if (rows.length === 0) {
             return NextResponse.json({ banner: null });
         }
 
-        // ランダムに1つ選択
+        // ランダムに1件選択
         const randomIndex = Math.floor(Math.random() * rows.length);
-        const banner = rows[randomIndex];
+        const selectedBanner = rows[randomIndex];
 
-        return NextResponse.json({ banner });
+        return NextResponse.json({ banner: selectedBanner });
     } catch (error) {
-        console.error('Failed to fetch random affiliate banner:', error);
+        console.error('Failed to fetch affiliate banner:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch affiliate banner' },
+            { error: 'Internal Server Error' },
             { status: 500 }
         );
     }

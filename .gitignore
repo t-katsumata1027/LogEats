@@ -41,3 +41,8 @@ yarn-error.log*
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# Temporary development/inspection scripts
+scripts/dev-db-hook.ts
+scripts/query-matched-events.ts
+scripts/seed-preview-banners.ts

@@ -7,7 +7,9 @@
     "build": "next build",
     "db:migrate:product-events": "node scripts/migrate-product-events.mjs",
     "db:migrate:cron-report-executions": "node scripts/migrate-cron-report-executions.mjs",
-    "test:daily-report": "tsx scripts/test-daily-report-integration.ts"
+    "db:migrate:affiliate": "node scripts/migrate-affiliate-banners.mjs",
+    "test:daily-report": "tsx scripts/test-daily-report-integration.ts",
+    "test:affiliate:isolated": "tsx scripts/test-affiliate-isolated-db.ts"
   },
   "dependencies": {
     "@clerk/localizations": "^3.37.2",
@@ -35,12 +37,14 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
     "daisyui": "^4.12.10",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.0.0",
+    "pg": "^8.22.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "tsx": "^4.21.0",
