@@ -6,8 +6,11 @@
 
 - Search Console所有権確認: 完了
 - GA4とSearch Consoleのリンク: 完了
-- `sitemap.xml`送信: 完了。送信直後の取得処理を監視中
-- `product_events`移行と匿名・セッション・UTM計測: 実装済み、本番適用待ち
+- `sitemap.xml`送信: 完了。監視中
+- `product_events`移行と匿名・セッション・UTM計測: 本番DBマイグレーション完了
+- Discord朝報環境変数 (Doppler): 登録・同期完了
+- Discord朝報Cron API & バッチ処理: 実装および統合テスト完了
+
 
 ## 本番DB移行
 
@@ -18,6 +21,7 @@ Vercelの本番DB環境変数を取得できる環境で次を実行する。
 
 ```bash
 npm run db:migrate:product-events
+npm run db:migrate:cron-report-executions
 ```
 
 完了確認:
@@ -52,6 +56,30 @@ Googleサービスアカウントには、GA4プロパティの閲覧権限とSe
 4. 継続: D1・D7・D28、再訪ユーザー
 5. 収益: A8表示、クリック、CTR、発生・承認・確定
 6. 品質: APIエラー率、p95応答時間、クロール・サイトマップ異常
+
+## 朝報の実行状態と再送方針
+
+`cron_report_executions.report_date`を主キーとし、同じ対象日の通常朝報は最大1回だけ送信を試行する。
+Discord WebhookはDBトランザクションの対象外であるため、配信漏れの自動回復より重複配信の防止を優先する。
+
+| 状態 | 意味 | 自動再送 |
+|---|---|---|
+| `pending` | 集計または送信処理中 | しない |
+| `pre_send_fail` | Discord送信開始前に失敗 | しない。原因確認後に手動判断 |
+| `unknown_fail` | Discord送信開始後に結果が確定できない | しない。Discord到達状況を手動確認 |
+| `sent` | Discordが成功応答を返し、DB更新も完了 | 不要 |
+
+状態を手動で変更・削除して再送する場合は、Discord上の到達状況を先に確認する。
+
+## Cron統合テスト
+
+以下のテストは依存性をメモリ実装へ差し替えるため、本番DB、Google API、実Discord Webhookへアクセスしない。
+
+```bash
+npm run test:daily-report
+```
+
+未認証アクセス、並行3リクエスト、Google API失敗、Discord送信結果不明、送信前例外を検証する。
 
 ## 自動停止条件
 

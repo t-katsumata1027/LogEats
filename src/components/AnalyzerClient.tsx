@@ -67,7 +67,7 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 short_id: data.short_id,
                 isAmbiguous: data.is_ambiguous
             });
-            sendAnalyticsEvent({
+            void sendTrackEvent({
                 event_type: "analysis_success",
                 path: "/",
                 duration_ms: Date.now() - startedAt,
@@ -147,7 +147,7 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 short_id: data.short_id,
                 isAmbiguous: false // Text is explicit, not ambiguous
             });
-            sendAnalyticsEvent({
+            void sendTrackEvent({
                 event_type: "analysis_success",
                 path: "/",
                 duration_ms: Date.now() - startedAt,
