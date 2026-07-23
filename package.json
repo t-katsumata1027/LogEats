@@ -5,10 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start": "next start",
     "db:migrate:product-events": "node scripts/migrate-product-events.mjs",
     "db:migrate:cron-report-executions": "node scripts/migrate-cron-report-executions.mjs",
     "db:migrate:affiliate": "node scripts/migrate-affiliate-banners.mjs",
+    "db:migrate:share-opt-in": "node scripts/migrate-share-opt-in.mjs",
     "test:daily-report": "tsx scripts/test-daily-report-integration.ts",
+    "test:seo": "node scripts/test-seo-regression.mjs",
     "test:affiliate:isolated": "tsx scripts/test-affiliate-isolated-db.ts"
   },
   "dependencies": {

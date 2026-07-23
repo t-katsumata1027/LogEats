@@ -10,7 +10,9 @@ export async function GET(
   try {
     // まずは単体 meal_logs を検索
     const { rows: mealRows } = await sql`
-      SELECT share_id FROM meal_logs WHERE short_id = ${shortId} LIMIT 1;
+      SELECT share_id FROM meal_logs
+      WHERE short_id = ${shortId} AND share_enabled_at IS NOT NULL
+      LIMIT 1;
     `;
 
     if (mealRows.length > 0) {

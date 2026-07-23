@@ -12,12 +12,16 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     let log;
     if (isUuid) {
       const { rows } = await sql`
-        SELECT * FROM meal_logs WHERE share_id = ${id} LIMIT 1;
+      SELECT * FROM meal_logs
+      WHERE share_id = ${id} AND share_enabled_at IS NOT NULL
+      LIMIT 1;
       `;
       log = rows[0];
     } else {
       const { rows } = await sql`
-        SELECT * FROM meal_logs WHERE short_id = ${id} LIMIT 1;
+      SELECT * FROM meal_logs
+      WHERE short_id = ${id} AND share_enabled_at IS NOT NULL
+      LIMIT 1;
       `;
       log = rows[0];
     }

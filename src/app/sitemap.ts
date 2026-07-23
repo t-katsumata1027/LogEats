@@ -33,5 +33,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: "monthly",
             priority: 0.5,
         },
+        {
+            url: absoluteUrl("/how-it-works"),
+            lastModified: new Date("2026-07-24"),
+            changeFrequency: "monthly",
+            priority: 0.7,
+        },
     ];
 }

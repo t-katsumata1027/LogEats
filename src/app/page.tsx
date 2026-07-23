@@ -1,9 +1,7 @@
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
 import { AnalyzerClient } from "@/components/AnalyzerClient";
-import { CustomUserButton } from "@/components/CustomUserButton";
 import { RecordingTabs } from "@/components/RecordingTabs";
-import { AddToHomeInlineCard, AddToHomeBanner } from "@/components/AddToHomeScreen";
+import { AddToHomeBanner } from "@/components/AddToHomeScreen";
 import { WeeklyChartDemo } from "@/components/WeeklyChartDemo";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
 import { AdBanner } from "@/components/AdBanner";
@@ -27,9 +25,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function Home() {
-  const { userId } = await auth();
-
+export default function Home() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -75,7 +71,7 @@ export default async function Home() {
             "name": "画像解析の精度はどのくらいですか？",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "最新のAIモデルを使用しており、一般的な料理であれば高い精度で解析可能です。また、チャット形式で「ご飯を半分にした」などの修正も簡単に行えます。"
+              "text": "解析結果は食事内容の目安です。量、調理法、写真の角度、料理の構成によって差が出るため、必要に応じて内容を確認・修正してください。"
             }
           },
           {
@@ -98,9 +94,8 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className={userId ? "flex-1 flex flex-col w-full max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-4 overflow-hidden" : "flex-1 flex flex-col w-full max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-4"}>
-        {!userId ? (
-          <>
+      <SignedOut>
+        <div className="flex-1 flex flex-col w-full max-w-2xl mx-auto px-4 pt-2 pb-0 sm:py-4">
             {/* Hero Section */}
             <div className="text-center py-6 sm:py-10 mb-8 animate-fade-in-up">
               <h1 className="text-3xl sm:text-4xl font-extrabold text-sage-900 tracking-tight mb-4">
@@ -121,8 +116,6 @@ export default async function Home() {
                 </div>
                 <span className="text-[11px] text-sage-400 font-medium">※無料で始められます</span>
               </div>
-              {/* ① ホーム画面追加カード（スマホ向け） */}
-              <AddToHomeInlineCard />
             </div>
 
             {/* Try it out Section */}
@@ -331,15 +324,38 @@ export default async function Home() {
                 <button className="btn btn-primary bg-sage-600 hover:bg-sage-700 text-white border-none rounded-full px-8 font-bold">ログイン / 登録</button>
               </SignInButton>
             </div>
-          </>
-        ) : (
+            <section className="mb-12 rounded-3xl border border-sage-200 bg-white p-6 sm:p-8" aria-labelledby="how-to-use">
+              <h2 id="how-to-use" className="text-2xl font-bold text-sage-800">Log-Eatsの使い方</h2>
+              <ol className="mt-5 space-y-4 text-sm leading-relaxed text-sage-700">
+                <li><span className="font-semibold">1. 食事の画像または内容を入力</span><br />写真をアップロードするか、食べた内容をテキストで入力します。</li>
+                <li><span className="font-semibold">2. AIがカロリーとPFCの目安を解析</span><br />量や調理法、写真の角度によって推定値は変わります。</li>
+                <li><span className="font-semibold">3. 結果を確認して記録</span><br />ログインすると、解析結果を食事履歴として保存して振り返れます。</li>
+              </ol>
+            </section>
+            <section className="mb-12 rounded-3xl border border-sage-200 bg-sage-50/50 p-6 sm:p-8" aria-labelledby="faq">
+              <h2 id="faq" className="text-2xl font-bold text-sage-800">よくある質問</h2>
+              <div className="mt-5 space-y-5 text-sm leading-relaxed text-sage-700">
+                <div>
+                  <h3 className="font-semibold text-sage-800">画像解析の精度はどのくらいですか？</h3>
+                  <p className="mt-1">解析結果は食事内容の目安です。量、調理法、写真の角度、料理の構成によって差が出るため、必要に応じて内容を確認・修正してください。</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sage-800">無料で使えますか？</h3>
+                  <p className="mt-1">はい、基本的な食事記録とAI解析機能は無料で利用できます。</p>
+                </div>
+              </div>
+            </section>
+        </div>
+      </SignedOut>
+      <SignedIn>
           <div className="flex flex-col w-full pb-0 h-[calc(100dvh-130px)] sm:h-[calc(100dvh-97px)] -mx-4 sm:mx-0 min-w-[100vw] sm:min-w-0">
             <RecordingTabs isLoggedIn={true} />
           </div>
-        )}
-      </div>
-      {/* ② ホーム画面追加 固定バナー（スマホ向け） */}
-      {!userId && <AddToHomeBanner />}
+      </SignedIn>
+      <SignedOut>
+        {/* ② ホーム画面追加 固定バナー（スマホ向け） */}
+        <AddToHomeBanner />
+      </SignedOut>
     </main>
   );
 }

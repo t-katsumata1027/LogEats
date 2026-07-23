@@ -15,12 +15,16 @@ async function getMealLog(id: string) {
   
   if (isUuid) {
     const { rows } = await sql`
-      SELECT * FROM meal_logs WHERE share_id = ${id} LIMIT 1;
+      SELECT * FROM meal_logs
+      WHERE share_id = ${id} AND share_enabled_at IS NOT NULL
+      LIMIT 1;
     `;
     return rows[0];
   } else {
     const { rows } = await sql`
-      SELECT * FROM meal_logs WHERE short_id = ${id} LIMIT 1;
+      SELECT * FROM meal_logs
+      WHERE short_id = ${id} AND share_enabled_at IS NOT NULL
+      LIMIT 1;
     `;
     return rows[0];
   }
@@ -144,8 +148,6 @@ export default async function SharePage({ params }: SharePageProps) {
             foods={foods} 
             summary={summary} 
             isLoggedIn={false}
-            share_id={log.share_id}
-            short_id={log.short_id}
           />
 
           <AffiliateBanner />

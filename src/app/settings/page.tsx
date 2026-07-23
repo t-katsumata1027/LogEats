@@ -7,6 +7,9 @@ import { LineConnectionSettings } from "@/components/LineConnectionSettings";
 import Link from "next/link";
 import Image from "next/image";
 
+// 認証済みユーザーの設定を表示するため、公開ページの静的化対象から分離する。
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
     const user = await currentUser();
     const dbUserId = await getDbUserId();

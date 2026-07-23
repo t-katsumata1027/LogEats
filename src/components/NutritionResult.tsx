@@ -1,16 +1,17 @@
 "use client";
 
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
-import { Share2, Copy, Check } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { sendTrackEvent } from "@/lib/clientTracking";
 
 interface NutritionResultProps {
   foods: AnalyzedFood[];
   summary: NutritionSummary;
   isAmbiguous?: boolean;
   isLoggedIn?: boolean;
-  share_id?: string;
-  short_id?: string;
+  savedLogId?: number;
 }
 
 function SummaryCard({ summary }: { summary: NutritionSummary }) {
@@ -40,18 +41,31 @@ function SummaryCard({ summary }: { summary: NutritionSummary }) {
   );
 }
 
-export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn, share_id, short_id }: NutritionResultProps) {
+export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn, savedLogId }: NutritionResultProps) {
   const [copied, setCopied] = useState(false);
+  const pathname = usePathname();
+
+  const enableShare = async () => {
+    if (!isLoggedIn || !savedLogId) return null;
+
+    const response = await fetch("/api/shares/meal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meal_log_id: savedLogId }),
+    });
+    if (!response.ok) throw new Error("共有リンクの準備に失敗しました。");
+    return response.json() as Promise<{ share_id: string; short_id: string }>;
+  };
 
   const handleCopy = async () => {
-    const id = short_id || share_id;
-    if (!id) return;
-    
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
-    const shareUrl = short_id ? `${baseUrl}/s/${short_id}` : `${baseUrl}/share/${share_id}`;
     try {
+      const share = await enableShare();
+      if (!share) return;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
+      const shareUrl = `${baseUrl}/s/${share.short_id}`;
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
+      void sendTrackEvent({ event_type: "share_click", path: pathname, action_detail: "channel=copy;scope=meal" });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Copy failed:", err);
@@ -78,16 +92,29 @@ export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn, share
 
       <SummaryCard summary={summary} />
 
-      {share_id && (
+      {isLoggedIn && savedLogId && (
         <div className="flex flex-col gap-3">
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
-                const shareUrl = short_id ? `${baseUrl}/s/${short_id}` : `${baseUrl}/share/${share_id}`;
-                const shareText = `今日の食事解析結果 🔥\n${Math.round(summary.totalCalories)}kcal (P:${Math.round(summary.totalProtein)}g F:${Math.round(summary.totalFat)}g C:${Math.round(summary.totalCarbs)}g)\n#AI食事解析 #LogEats #食事記録 @EatsLog88161`;
-                const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-                window.open(twitterUrl, "_blank");
+              onClick={async () => {
+                const popup = window.open("about:blank", "_blank");
+                try {
+                  const share = await enableShare();
+                  if (!share) {
+                    popup?.close();
+                    return;
+                  }
+                  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
+                  const shareUrl = `${baseUrl}/s/${share.short_id}`;
+                  const shareText = `今日の食事解析結果 🔥\n${Math.round(summary.totalCalories)}kcal (P:${Math.round(summary.totalProtein)}g F:${Math.round(summary.totalFat)}g C:${Math.round(summary.totalCarbs)}g)\n#AI食事解析 #LogEats #食事記録 @EatsLog88161`;
+                  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+                  if (popup) popup.location.href = twitterUrl;
+                  else window.open(twitterUrl, "_blank");
+                  void sendTrackEvent({ event_type: "share_click", path: pathname, action_detail: "channel=x;scope=meal" });
+                } catch (error) {
+                  console.error("Meal share failed:", error);
+                  popup?.close();
+                }
               }}
               className="btn flex-1 bg-black text-white hover:bg-gray-900 border-none shadow-md flex items-center justify-center gap-2 py-4 h-auto rounded-2xl transition-all transform active:scale-95"
             >
@@ -107,7 +134,7 @@ export function NutritionResult({ foods, summary, isAmbiguous, isLoggedIn, share
             </button>
           </div>
           <p className="text-[10px] text-sage-400 text-center">
-            ※ シェアまたはURLを共有すると、この食事内容が公開されます
+            ※ ボタンを押した時点で、この食事内容を公開共有できるリンクを作成します
           </p>
         </div>
       )}

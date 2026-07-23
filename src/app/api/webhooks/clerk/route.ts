@@ -3,6 +3,25 @@ import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { sendLarkNotification } from '@/lib/lark';
 import { sql } from "@vercel/postgres";
+import crypto from "node:crypto";
+
+async function recordAuthEvent(userId: number, eventType: "sign_up" | "login") {
+    try {
+        await sql`
+            INSERT INTO product_events (event_id, user_id, event_type, path, properties)
+            VALUES (
+                ${crypto.randomUUID()}::uuid,
+                ${userId},
+                ${eventType},
+                '/api/webhooks/clerk',
+                ${JSON.stringify({ source: 'clerk_webhook' })}::jsonb
+            );
+        `;
+    } catch (error) {
+        // 認証Webhookの成否を計測障害で失敗させない。
+        console.error('Failed to record authentication product event:', error);
+    }
+}
 
 export async function POST(req: Request) {
     const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -53,13 +72,17 @@ export async function POST(req: Request) {
         if (eventType === 'user.created') {
             try {
                 // line_user_id は Messaging API 連携でのみ管理し、Clerk Webhook では設定しない
-                await sql`
+                const { rows } = await sql`
                     INSERT INTO users (clerk_id, email, name)
                     VALUES (${id}, ${email}, ${name})
                     ON CONFLICT (clerk_id) DO UPDATE SET 
                         email = EXCLUDED.email, 
                         name = EXCLUDED.name
+                    RETURNING id
                 `;
+                if (rows[0]?.id) {
+                    await recordAuthEvent(Number(rows[0].id), 'sign_up');
+                }
             } catch (e) {
                 console.error('Error inserting user:', e);
             }
@@ -86,9 +109,10 @@ export async function POST(req: Request) {
 
         let userName = 'Unknown';
         try {
-            const { rows } = await sql`SELECT name, email FROM users WHERE clerk_id = ${user_id} LIMIT 1`;
+            const { rows } = await sql`SELECT id, name, email FROM users WHERE clerk_id = ${user_id} LIMIT 1`;
             if (rows.length > 0) {
                 userName = `${rows[0].name || ''} (${rows[0].email || ''})`.trim();
+                await recordAuthEvent(Number(rows[0].id), 'login');
             }
         } catch (e) { }
 

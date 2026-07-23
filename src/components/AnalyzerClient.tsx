@@ -22,8 +22,6 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
         foods: AnalyzedFood[];
         summary: NutritionSummary;
         savedLogId?: number;
-        share_id?: string;
-        short_id?: string;
         isAmbiguous?: boolean;
     } | null>(null);
 
@@ -63,8 +61,6 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 foods: data.foods,
                 summary: data.summary,
                 savedLogId: data.savedLogId,
-                share_id: data.share_id,
-                short_id: data.short_id,
                 isAmbiguous: data.is_ambiguous
             });
             void sendTrackEvent({
@@ -73,6 +69,7 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 duration_ms: Date.now() - startedAt,
                 action_detail: actionDetail,
             });
+            window.dispatchEvent(new Event("logeats:analysis-completed"));
         } catch (e) {
             setError(e instanceof Error ? e.message : "エラーが発生しました");
             void sendTrackEvent({
@@ -143,8 +140,6 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                     totalCarbs: data.totalCarbs
                 },
                 savedLogId: data.savedLogId,
-                share_id: data.share_id,
-                short_id: data.short_id,
                 isAmbiguous: false // Text is explicit, not ambiguous
             });
             void sendTrackEvent({
@@ -153,6 +148,7 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 duration_ms: Date.now() - startedAt,
                 action_detail: actionDetail,
             });
+            window.dispatchEvent(new Event("logeats:analysis-completed"));
             // We do not clear manualText here so the user can see what they analyzed
         } catch (err) {
             setError(err instanceof Error ? err.message : 'エラーが発生しました');
@@ -313,8 +309,7 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                     summary={result.summary}
                     isAmbiguous={result.isAmbiguous}
                     isLoggedIn={isLoggedIn}
-                    share_id={result.share_id}
-                    short_id={result.short_id}
+                    savedLogId={result.savedLogId}
                 />
             )}
 

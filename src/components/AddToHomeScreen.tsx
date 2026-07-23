@@ -48,6 +48,32 @@ function useAddToHome() {
     return { hidden, isIOS, showHint, setShowHint, handleInstall };
 }
 
+/**
+ * 初回訪問では解析UIを優先し、解析成功後または再訪時だけ固定バナーを表示する。
+ */
+function useBannerEligibility() {
+    const [eligible, setEligible] = useState(false);
+
+    useEffect(() => {
+        const visitedKey = "logeats:pwa-visited";
+        const analysisKey = "logeats:analysis-completed";
+        const hasVisited = window.localStorage.getItem(visitedKey) === "1";
+        const hasCompletedAnalysis = window.localStorage.getItem(analysisKey) === "1";
+
+        window.localStorage.setItem(visitedKey, "1");
+        setEligible(hasVisited || hasCompletedAnalysis);
+
+        const handleAnalysisCompleted = () => {
+            window.localStorage.setItem(analysisKey, "1");
+            setEligible(true);
+        };
+        window.addEventListener("logeats:analysis-completed", handleAnalysisCompleted);
+        return () => window.removeEventListener("logeats:analysis-completed", handleAnalysisCompleted);
+    }, []);
+
+    return eligible;
+}
+
 /** ヒントポップアップ（内部用） */
 function HintPopup({
     isIOS,
@@ -151,9 +177,10 @@ export function AddToHomeInlineCard() {
 /** ③ 固定バナー: 画面下に常時表示（スマホ向け） */
 export function AddToHomeBanner() {
     const { hidden, isIOS, showHint, setShowHint, handleInstall } = useAddToHome();
+    const eligible = useBannerEligibility();
     const [dismissed, setDismissed] = useState(false);
 
-    if (hidden || dismissed) return null;
+    if (hidden || dismissed || !eligible) return null;
 
     return (
         <>
@@ -174,7 +201,7 @@ export function AddToHomeBanner() {
                     )}
 
                     <div className="flex items-center gap-3 bg-white border border-sage-200 rounded-2xl px-4 py-3 shadow-lg">
-                        <span className="text-2xl shrink-0">�</span>
+                        <span className="text-2xl shrink-0">📲</span>
                         <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-sage-800 leading-tight">
                                 ホーム画面に追加しよう！

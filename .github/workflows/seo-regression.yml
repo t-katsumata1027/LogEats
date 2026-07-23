@@ -1,0 +1,35 @@
+name: SEO Regression
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  seo-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_APP_URL: https://www.log-eats.com
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Next.jsを起動する
+        run: npm start -- -p 3000 > /tmp/log-eats-next.log 2>&1 &
+      - name: 公開URLを待機する
+        run: |
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - run: npm run test:seo
+      - name: 失敗時にNext.jsログを表示する
+        if: failure()
+        run: cat /tmp/log-eats-next.log

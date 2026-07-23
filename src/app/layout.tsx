@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { Inter, Zen_Kaku_Gothic_New } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
 import { jaJP } from '@clerk/localizations';
@@ -16,17 +15,14 @@ const inter = Inter({
 });
 
 const zenGothic = Zen_Kaku_Gothic_New({
-  weight: ["300", "400", "500", "700"],
+  // 通常文と見出しで使用するウェイトに限定し、公開ページのフォント転送量を抑える。
+  weight: ["400", "700"],
   subsets: ["latin"],
   variable: "--font-zen-gothic",
   display: "swap",
 });
 
-import { BottomNav } from "@/components/BottomNav";
-import { Footer } from "@/components/Footer";
-import { auth } from '@clerk/nextjs/server';
-import { EventTracker } from "@/components/EventTracker";
-import { GlobalHeader } from "@/components/GlobalHeader";
+import { AppShell } from "@/components/AppShell";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -84,12 +80,11 @@ const customLocalization = {
   }
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { userId } = await auth();
   const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
   return (
@@ -104,14 +99,8 @@ export default async function RootLayout({
             ></script>
           )}
         </head>
-        <body className={`min-h-screen ${inter.variable} ${zenGothic.variable} font-sans antialiased bg-cream text-sage-900 flex flex-col ${userId ? "pb-20 sm:pb-0" : ""}`}>
-          <EventTracker />
-          <GlobalHeader />
-          <div className="flex-1">
-            {children}
-          </div>
-          {!userId && <Footer />}
-          {userId && <BottomNav />}
+        <body className={`min-h-screen ${inter.variable} ${zenGothic.variable} font-sans antialiased bg-cream text-sage-900 flex flex-col`}>
+          <AppShell>{children}</AppShell>
           <Analytics />
           <SpeedInsights />
           {process.env.NEXT_PUBLIC_GA_ID && (

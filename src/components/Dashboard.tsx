@@ -10,6 +10,7 @@ import { WeeklyChart } from "@/components/WeeklyChart";
 import { AdBanner } from "@/components/AdBanner";
 import { AffiliateBanner } from "@/components/AffiliateBanner";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
+import { sendTrackEvent } from "@/lib/clientTracking";
 
 type MealLog = {
     id: number;
@@ -274,29 +275,59 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
         }
     };
 
-    const handleShareModal = (shareId: string | undefined, shortId?: string | null) => {
-        if (!shareId) return;
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
-        const shareUrl = shortId
-            ? `${baseUrl}/s/${shortId}`
-            : `${baseUrl}/share/${shareId}`;
-
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            setCopiedShareId(shareId);
-            setTimeout(() => setCopiedShareId(null), 2000);
+    const enableMealShare = async (logId: number) => {
+        const response = await fetch('/api/shares/meal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ meal_log_id: logId }),
         });
+        if (!response.ok) throw new Error('共有リンクの準備に失敗しました。');
+        return response.json() as Promise<{ share_id: string; short_id: string }>;
     };
 
-    const handleShareX = (log: MealLog) => {
-        if (!log.share_id) return;
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
-        const shareUrl = log.short_id
-            ? `${baseUrl}/s/${log.short_id}`
-            : `${baseUrl}/share/${log.share_id}`;
-        
-        const shareText = `今日の食事解析結果 🔥\n${Math.round(log.total_calories)}kcal (P:${Math.round(log.total_protein)}g F:${Math.round(log.total_fat)}g C:${Math.round(log.total_carbs)}g)\n#AI食事解析 #LogEats #食事記録 @EatsLog88161`;
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-        window.open(twitterUrl, "_blank");
+    const handleShareModal = async (log: MealLog) => {
+        try {
+            const { share_id, short_id } = await enableMealShare(log.id);
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
+            const shareUrl = `${baseUrl}/s/${short_id}`;
+            await navigator.clipboard.writeText(shareUrl);
+            setSelectedLog((current) => current?.id === log.id
+                ? { ...current, share_id, short_id }
+                : current);
+            setLogs((current) => current.map((item) => item.id === log.id
+                ? { ...item, share_id, short_id }
+                : item));
+            setCopiedShareId(share_id);
+            void sendTrackEvent({ event_type: "share_click", path: "/dashboard", action_detail: "channel=copy;scope=meal" });
+            setTimeout(() => setCopiedShareId(null), 2000);
+        } catch (error) {
+            console.error('Meal share copy failed:', error);
+            alert('共有リンクの作成に失敗しました。');
+        }
+    };
+
+    const handleShareX = async (log: MealLog) => {
+        const win = window.open('about:blank', '_blank');
+        try {
+            const { share_id, short_id } = await enableMealShare(log.id);
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://log-eats.com';
+            const shareUrl = `${baseUrl}/s/${short_id}`;
+            const shareText = `今日の食事解析結果 🔥\n${Math.round(log.total_calories)}kcal (P:${Math.round(log.total_protein)}g F:${Math.round(log.total_fat)}g C:${Math.round(log.total_carbs)}g)\n#AI食事解析 #LogEats #食事記録 @EatsLog88161`;
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+            if (win) win.location.href = twitterUrl;
+            else window.open(twitterUrl, '_blank');
+            setSelectedLog((current) => current?.id === log.id
+                ? { ...current, share_id, short_id }
+                : current);
+            setLogs((current) => current.map((item) => item.id === log.id
+                ? { ...item, share_id, short_id }
+                : item));
+            void sendTrackEvent({ event_type: "share_click", path: "/dashboard", action_detail: "channel=x;scope=meal" });
+        } catch (error) {
+            console.error('Meal share failed:', error);
+            win?.close();
+            alert('共有リンクの作成に失敗しました。');
+        }
     };
 
     const handleShareDailyX = async () => {
@@ -1033,7 +1064,7 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {!isEditing && selectedLog.share_id && (
+                                        {!isEditing && (
                                             <div className="flex items-center gap-1.5 bg-sage-50/50 p-1 rounded-full border border-sage-100">
                                                 <button
                                                     onClick={() => handleShareX(selectedLog)}
@@ -1046,7 +1077,7 @@ export function Dashboard({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                                                     <span className="text-[9px] font-bold">Xシェア</span>
                                                 </button>
                                                 <button
-                                                    onClick={() => handleShareModal(selectedLog.share_id, selectedLog.short_id)}
+                                                    onClick={() => handleShareModal(selectedLog)}
                                                     className={`btn btn-xs h-7 min-h-0 px-2.5 rounded-full flex items-center gap-1 transition-all border-none ${copiedShareId === selectedLog.share_id
                                                         ? 'bg-green-500 text-white hover:bg-green-600'
                                                         : 'bg-white text-sage-600 hover:bg-sage-50 border-sage-200 shadow-sm'

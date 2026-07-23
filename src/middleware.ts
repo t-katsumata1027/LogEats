@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
     '/line/link(.*)',           // LINEアカウント連携確認ページ（公開）
     '/terms',
     '/privacy',
+    '/how-it-works',
     '/news(.*)',               // お知らせ・記事ページ（AdSense用）
     '/share(.*)',              // 公開シェアページ
     '/s/(.*)',                 // 短縮URLシェアページ

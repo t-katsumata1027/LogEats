@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
+// 連携トークンとログイン状態を扱うため、静的生成の対象外とする。
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   searchParams: Promise<{ linkToken?: string }>;
 }

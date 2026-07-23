@@ -19,7 +19,7 @@
 | DATA-003 | 解析3イベントをGA4へ送る | AnalyzerClient、各API | Codex | 進行中 | `analysis_start/success/error`実装済み。DebugViewで確認 |
 | DATA-004 | スポット解析の派生栄養データをfoodDBへ保存する | analyze/manual API、foodDatabase | Codex | 完了 | 生画像・入力文・識別子を除外し、新規推定・ラベル値だけを検証して保存 |
 | PRIV-001 | 匿名解析画像の自動公開を停止する | analyze/manual API、Blob | Codex＋人間 | 完了 | 匿名時はBlob、meal_logs、共有IDへ保存しない |
-| PRIV-002 | 共有をopt-in、noindex、失効可能にする | share routes | Codex＋人間 | 進行中 | noindex実装済み。失効、削除、期限は未実装 |
+| PRIV-002 | 共有をopt-in、noindex、失効可能にする | share routes | Codex＋人間 | 進行中 | noindexと明示opt-inを実装済み。失効、削除、期限は未実装 |
 | API-001 | 公開AI APIを防御する | analyze/manual API | Codex | 進行中 | MIME、容量、文字数、アプリ内rate limit実装済み。Vercel Firewallと日次quotaは未設定 |
 | LEGAL-001 | プライバシー説明を実装と一致させる | privacy、GA4、広告、AI | 人間＋専門家 | 承認待ち | 実装内容へ更新済み。公開前に専門家レビュー |
 | SEC-001 | 広告HTMLをsanitizeする | AffiliateBanner、広告DB | Codex | 完了 | A8ドメインのみ許可、危険タグ・属性を除去、`sponsored`付与 |
@@ -31,17 +31,17 @@
 |---|---|---|---|---|---|
 | DATA-010 | `product_events`スキーマを作る | DB migration | Codex | 進行中 | migrationと二重書き実装済み。本番DB適用待ち |
 | DATA-011 | 匿名IDとセッションIDを導入する | ブラウザ、API | Codex | 進行中 | ID・first/last touch・UTM実装済み。本番イベント確認待ち |
-| DATA-012 | 登録・ログインイベントを実装する | Clerk webhook/callback | Codex | 未着手 | `sign_up`、`login`を流入元付きで取得 |
+| DATA-012 | 登録・ログインイベントを実装する | Clerk webhook/callback | Codex | 進行中 | Clerk Webhookから`sign_up`、`login`を保存済み。流入元との確定結合を追加する |
 | DATA-013 | 初回記録と継続を定義する | meal_logs集計 | Codex | 未着手 | first_log、D1、D7、D28を再現可能 |
-| DATA-014 | 共有イベントを実装する | NutritionResult、Dashboard | Codex | 未着手 | 作成、X、コピー、共有流入を取得 |
+| DATA-014 | 共有イベントを実装する | NutritionResult、Dashboard | Codex | 進行中 | 食事共有作成、X・コピー操作を保存済み。共有流入の帰属を追加する |
 | AFF-010 | バナーID・案件ID・配置を返す | affiliate API/DB | Codex | 完了 | DDL管理API完全分離・マイグレーションSQL・1秒露出判定・キーボード重複解消・サーバーマスタ照合・PII/危険スキーム拒否・first_touch/last_touch構造化保存・安全設計検証スクリプト・隔離Postgres実機E2E・実ブラウザ操作検証・product_events DB突合・本番Neonマイグレーション適用 全パス |
 | AFF-011 | A8成果取込方式を決める | CSVまたはAPI | 人間＋Codex | 未着手 | 日次で発生・承認・確定を結合 |
 | REPORT-001 | 毎朝Discordレポートを実装する | scheduler、Discord webhook | Codex＋人間 | 未着手 | 毎日7時、再送、重複防止、失敗通知 |
-| PERF-001 | 公開と認証layoutを分離する | App Router | Codex | 未着手 | 公開ページが静的/ISR、認証UI維持 |
-| PERF-002 | フォントpreloadを削減する | layout、font設定 | Codex | 未着手 | 不要なwoff2 preload削減、表示崩れなし |
+| PERF-001 | 公開と認証layoutを分離する | App Router | Codex | 完了 | 認証依存UIをクライアント境界へ分離し、公開ページの静的生成を確認 |
+| PERF-002 | フォントpreloadを削減する | layout、font設定 | Codex | 進行中 | Zen Kaku Gothic Newを400/700へ削減。Previewで表示確認待ち |
 | UX-001 | 主CTAを無料解析へ統一する | トップ | 人間＋Codex | 未着手 | A/B仮説と成功条件を定義 |
-| UX-002 | PWA訴求の重複を解消する | AddToHomeScreen | Codex | 未着手 | 初回解析を覆わず、文字化け0件 |
-| TRUST-001 | 計算方法・出典・限界ページを作る | 新規公開ページ | 人間＋Codex | 未着手 | 一次資料、更新日、推定注意を表示 |
+| UX-002 | PWA訴求の重複を解消する | AddToHomeScreen | Codex | 進行中 | 初回固定バナーを抑止し、文字化けを修正。Preview確認待ち |
+| TRUST-001 | 計算方法・出典・限界ページを作る | 新規公開ページ | 人間＋Codex | 完了 | 一次資料、更新日、推定値の注意を`/how-it-works`へ表示 |
 | TRUST-002 | 運営者・執筆者情報を整備する | 記事テンプレート | 人間 | 未着手 | Who/How/Why、問い合わせ先 |
 
 ## P1: AI広報とSNS開始前
@@ -74,7 +74,7 @@
 | ADS-010 | AdSense申請可否を判定する | コンテンツ・規約 | 人間 | 未着手 | ads.txt、ポリシー、十分な独自記事 |
 | EC-001 | Amazon・楽天案件を選定する | EC affiliate | 人間 | 未着手 | 読者適合、条件、在庫・価格確認手順 |
 | AUTO-001 | 低リスク投稿の予約自動化 | SNS workflow | Codex＋人間 | 保留 | 30日間品質事故0、計測欠損なし |
-| SEO-020 | SEO回帰テストをCI化する | GitHub Actions | Codex | 未着手 | HTTP、canonical、title、robots、JSON-LD、CWV |
+| SEO-020 | SEO回帰テストをCI化する | GitHub Actions | Codex | 進行中 | HTTP、canonical、title、robots、JSON-LD、HTMLサイズ予算を実装。GitHubシークレット設定と初回CI確認待ち |
 
 ## 毎日の運用タスク
 
