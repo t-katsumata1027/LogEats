@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { sql } from "@vercel/postgres";
 import { NextRequest, NextResponse } from "next/server";
+import { sql } from "@vercel/postgres";
 import {
   fetchGoogleMetrics,
   type GoogleMetricsResult,
@@ -9,7 +9,9 @@ import {
   sendDiscordAlert,
   sendDiscordReport,
   type ReportData,
+  type AffiliateMetricsData,
 } from "@/lib/discord";
+import { isAllowedAffiliateHost } from "@/lib/affiliateConfig";
 
 type ExecutionStatus =
   | "pending"
@@ -41,6 +43,11 @@ export interface DailyReportExecutionStore {
     startInclusive: Date,
     endExclusive: Date,
   ): Promise<ProductMetrics>;
+  collectAffiliateMetrics(
+    startInclusive: Date,
+    endExclusive: Date,
+    activeUsers?: number,
+  ): Promise<AffiliateMetricsData>;
   recordSentEvent(
     reportDate: string,
     executionId: string,
@@ -185,6 +192,264 @@ class PostgresDailyReportExecutionStore
       textAnalysis: Number(usageRows[0]?.text_count ?? 0),
       newUsers: Number(userRows[0]?.count ?? 0),
       firstMealLogs: Number(firstMealRows[0]?.count ?? 0),
+    };
+  }
+
+  async collectAffiliateMetrics(
+    startInclusive: Date,
+    endExclusive: Date,
+    activeUsers = 0,
+  ): Promise<AffiliateMetricsData> {
+    const startIso = startInclusive.toISOString();
+    const endIso = endExclusive.toISOString();
+
+    // 前前日 (Day-2) の期間算出
+    const dayMinus2Start = new Date(startInclusive.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+    const [
+      { rows: summaryRows },
+      { rows: bannerRows },
+      { rows: placementRows },
+      { rows: sourceRows },
+      { rows: campaignRows },
+      { rows: prevImpRows },
+      { rows: inactiveEventsRows },
+      { rows: spamWindowRows },
+      { rows: domainRows },
+    ] = await Promise.all([
+      // 1. 全体集計
+      sql`
+        SELECT
+          COUNT(*) FILTER (WHERE event_type = 'affiliate_impression') AS imps,
+          COUNT(*) FILTER (WHERE event_type = 'affiliate_click') AS clicks,
+          COUNT(DISTINCT session_id) FILTER (WHERE event_type = 'affiliate_impression') AS unique_imp_sessions,
+          COUNT(DISTINCT session_id) FILTER (WHERE event_type = 'affiliate_click') AS unique_click_sessions,
+          COUNT(*) FILTER (
+            WHERE event_type IN ('affiliate_impression', 'affiliate_click')
+              AND COALESCE(properties->>'banner_id', properties->'affiliate'->>'banner_id') IS NULL
+          ) AS missing_banner_ids,
+          COUNT(*) FILTER (
+            WHERE event_type IN ('affiliate_impression', 'affiliate_click')
+              AND COALESCE(properties->>'placement_id', properties->'affiliate'->>'placement_id') IS NULL
+          ) AS missing_placement_ids
+        FROM product_events
+        WHERE occurred_at >= ${startIso}::timestamptz
+          AND occurred_at < ${endIso}::timestamptz
+          AND event_type IN ('affiliate_impression', 'affiliate_click');
+      `,
+
+      // 2. 広告別集計
+      sql`
+        SELECT
+          COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id', 'unknown') AS banner_id,
+          COALESCE(b.name, '不明な広告バナー') AS banner_name,
+          COUNT(*) FILTER (WHERE pe.event_type = 'affiliate_impression') AS imps,
+          COUNT(*) FILTER (WHERE pe.event_type = 'affiliate_click') AS clicks
+        FROM product_events pe
+        LEFT JOIN affiliate_banners b
+          ON b.id = CASE
+            WHEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id', '') ~ '^[0-9]{1,10}$'
+              THEN CASE
+                WHEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id')::numeric <= 2147483647
+                  THEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id')::integer
+              END
+          END
+        WHERE pe.occurred_at >= ${startIso}::timestamptz
+          AND pe.occurred_at < ${endIso}::timestamptz
+          AND pe.event_type IN ('affiliate_impression', 'affiliate_click')
+        GROUP BY 1, 2
+        ORDER BY clicks DESC, imps DESC
+        LIMIT 5;
+      `,
+
+      // 3. 掲載位置別集計
+      sql`
+        SELECT
+          COALESCE(properties->>'placement_id', properties->'affiliate'->>'placement_id', 'unknown') AS placement_id,
+          COUNT(*) FILTER (WHERE event_type = 'affiliate_impression') AS imps,
+          COUNT(*) FILTER (WHERE event_type = 'affiliate_click') AS clicks
+        FROM product_events
+        WHERE occurred_at >= ${startIso}::timestamptz
+          AND occurred_at < ${endIso}::timestamptz
+          AND event_type IN ('affiliate_impression', 'affiliate_click')
+        GROUP BY 1
+        ORDER BY clicks DESC, imps DESC
+        LIMIT 5;
+      `,
+
+      // 4. 流入元別クリック
+      sql`
+        SELECT
+          COALESCE(utm_source, referrer, 'direct') AS source,
+          COUNT(*) AS clicks
+        FROM product_events
+        WHERE occurred_at >= ${startIso}::timestamptz
+          AND occurred_at < ${endIso}::timestamptz
+          AND event_type = 'affiliate_click'
+        GROUP BY 1
+        ORDER BY clicks DESC
+        LIMIT 3;
+      `,
+
+      // 5. キャンペーン別クリック
+      sql`
+        SELECT
+          COALESCE(utm_campaign, properties->>'campaign_id', properties->'affiliate'->>'campaign_id', 'none') AS campaign_id,
+          COUNT(*) AS clicks
+        FROM product_events
+        WHERE occurred_at >= ${startIso}::timestamptz
+          AND occurred_at < ${endIso}::timestamptz
+          AND event_type = 'affiliate_click'
+        GROUP BY 1
+        ORDER BY clicks DESC
+        LIMIT 3;
+      `,
+
+      // 6. 前前日 (Day-2) 表示数 (前日比急減検知用)
+      sql`
+        SELECT COUNT(*) AS prev_imps
+        FROM product_events
+        WHERE occurred_at >= ${dayMinus2Start}::timestamptz
+          AND occurred_at < ${startIso}::timestamptz
+          AND event_type = 'affiliate_impression';
+      `,
+
+      // 7. 無効化または非存在バナーのイベント件数
+      sql`
+        SELECT COUNT(*) AS inactive_count
+        FROM product_events pe
+        LEFT JOIN affiliate_banners b
+          ON b.id = CASE
+            WHEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id', '') ~ '^[0-9]{1,10}$'
+              THEN CASE
+                WHEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id')::numeric <= 2147483647
+                  THEN COALESCE(pe.properties->>'banner_id', pe.properties->'affiliate'->>'banner_id')::integer
+              END
+          END
+        WHERE pe.occurred_at >= ${startIso}::timestamptz
+          AND pe.occurred_at < ${endIso}::timestamptz
+          AND pe.event_type IN ('affiliate_impression', 'affiliate_click')
+          AND (b.id IS NULL OR b.is_active = false);
+      `,
+
+      // 8. スパム判定: 10分時間窓内で同一セッションから5回以上のクリック
+      sql`
+        SELECT session_id, date_trunc('hour', occurred_at) + (extract(minute from occurred_at)::int / 10) * interval '10 min' as window_start, COUNT(*) AS window_clicks
+        FROM product_events
+        WHERE occurred_at >= ${startIso}::timestamptz
+          AND occurred_at < ${endIso}::timestamptz
+          AND event_type = 'affiliate_click'
+          AND session_id IS NOT NULL
+        GROUP BY session_id, window_start
+        HAVING COUNT(*) >= 5
+        LIMIT 1;
+      `,
+
+      // 9. ドメインチェック: 過去イベントのターゲットドメイン取得
+      sql`
+        SELECT DISTINCT COALESCE(properties->>'target_domain', properties->'affiliate'->>'target_domain') AS target_domain
+        FROM product_events
+        WHERE occurred_at >= ${startIso}::timestamptz
+          AND occurred_at < ${endIso}::timestamptz
+          AND event_type = 'affiliate_click';
+      `,
+    ]);
+
+    const summary = summaryRows[0] || {};
+    const impressions = Number(summary.imps ?? 0);
+    const clicks = Number(summary.clicks ?? 0);
+    const totalEvents = impressions + clicks;
+    const uniqueImpressionSessions = Number(summary.unique_imp_sessions ?? 0);
+    const uniqueClickSessions = Number(summary.unique_click_sessions ?? 0);
+    const missingBannerIdCount = Number(summary.missing_banner_ids ?? 0);
+    const missingPlacementIdCount = Number(summary.missing_placement_ids ?? 0);
+    const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+    const prevDayMinus2Imps = Number(prevImpRows[0]?.prev_imps ?? 0);
+    const inactiveEventCount = Number(inactiveEventsRows[0]?.inactive_count ?? 0);
+
+    const topBanners = bannerRows.map((row: any) => {
+      const imps = Number(row.imps ?? 0);
+      const clks = Number(row.clicks ?? 0);
+      return {
+        bannerId: row.banner_id,
+        name: row.banner_name,
+        impressions: imps,
+        clicks: clks,
+        ctr: imps > 0 ? (clks / imps) * 100 : 0,
+      };
+    });
+
+    const topPlacements = placementRows.map((row: any) => {
+      const imps = Number(row.imps ?? 0);
+      const clks = Number(row.clicks ?? 0);
+      return {
+        placementId: row.placement_id,
+        impressions: imps,
+        clicks: clks,
+        ctr: imps > 0 ? (clks / imps) * 100 : 0,
+      };
+    });
+
+    const topSources = sourceRows.map((r: any) => ({ source: String(r.source), clicks: Number(r.clicks) }));
+    const topCampaigns = campaignRows.map((r: any) => ({ campaignId: String(r.campaign_id), clicks: Number(r.clicks) }));
+
+    // データ品質異常チェック
+    const qualityWarnings: string[] = [];
+
+    if (clicks > impressions && clicks > 2) {
+      qualityWarnings.push(`クリック数 (${clicks}) が表示数 (${impressions}) を超えています`);
+    }
+
+    if (totalEvents > 0) {
+      const bannerIdMissingRatio = (missingBannerIdCount / totalEvents) * 100;
+      if (bannerIdMissingRatio >= 5.0) {
+        qualityWarnings.push(`Banner ID欠損率が ${bannerIdMissingRatio.toFixed(1)}% (5%以上) に達しています`);
+      }
+
+      const placementIdMissingRatio = (missingPlacementIdCount / totalEvents) * 100;
+      if (placementIdMissingRatio >= 5.0) {
+        qualityWarnings.push(`Placement ID欠損率が ${placementIdMissingRatio.toFixed(1)}% (5%以上) に達しています`);
+      }
+    } else if (missingBannerIdCount > 0 || missingPlacementIdCount > 0) {
+      qualityWarnings.push(`ID欠損イベントが検出されました`);
+    }
+
+    if (activeUsers > 20 && impressions === 0) {
+      qualityWarnings.push(`訪問者 (${activeUsers}人) がいるにもかかわらず広告表示が0件です`);
+    }
+
+    if (prevDayMinus2Imps >= 20 && impressions < prevDayMinus2Imps * 0.5) {
+      qualityWarnings.push(`広告表示数が前前日 (${prevDayMinus2Imps} imps) から 50% 以上急減しました (${impressions} imps)`);
+    }
+
+    if (inactiveEventCount > 0) {
+      qualityWarnings.push(`無効化または削除済みのバナーのイベントが ${inactiveEventCount} 件発生しています`);
+    }
+
+    if (spamWindowRows.length > 0) {
+      qualityWarnings.push(`10分間に同一セッションからの集中クリック (5回以上) を検出しました`);
+    }
+
+    for (const dRow of domainRows) {
+      const domain = String(dRow.target_domain || '');
+      if (domain && !isAllowedAffiliateHost(domain)) {
+        qualityWarnings.push(`未許可ドメインへのクリックを検出: ${domain}`);
+      }
+    }
+
+    return {
+      impressions,
+      clicks,
+      ctr,
+      uniqueImpressionSessions,
+      uniqueClickSessions,
+      topBanners,
+      topPlacements,
+      topSources,
+      topCampaigns,
+      missingBannerIdCount,
+      missingPlacementIdCount,
+      qualityWarnings,
     };
   }
 
@@ -376,6 +641,31 @@ export function createDailyReportHandler(
         return NextResponse.json({ error: message }, { status: 502 });
       }
 
+      let affiliateMetrics: AffiliateMetricsData | null = null;
+      try {
+        affiliateMetrics = await dependencies.store.collectAffiliateMetrics(
+          startInclusive,
+          endExclusive,
+          googleResult.ga4.activeUsers,
+        );
+      } catch (affError) {
+        console.error("[DailyReport] アフィリエイト指標の取得に失敗しました:", affError);
+        affiliateMetrics = {
+          impressions: 0,
+          clicks: 0,
+          ctr: 0,
+          uniqueImpressionSessions: 0,
+          uniqueClickSessions: 0,
+          topBanners: [],
+          topPlacements: [],
+          topSources: [],
+          topCampaigns: [],
+          missingBannerIdCount: 0,
+          missingPlacementIdCount: 0,
+          qualityWarnings: ["アフィリエイトデータの取得中に例外が発生しました"],
+        };
+      }
+
       const stillOwner = await dependencies.store.hasOwnership(
         reportDate,
         executionId,
@@ -415,9 +705,9 @@ export function createDailyReportHandler(
                 100
               : 0,
         },
+        affiliate: affiliateMetrics,
       };
 
-      // ここから先は送信結果が不明になる可能性があるため、自動再送しない。
       sendStarted = true;
       const sent = await dependencies.sendDiscordReport(
         webhookUrl,
@@ -444,7 +734,6 @@ export function createDailyReportHandler(
         throw new Error("Discord送信後のsent状態更新に失敗しました。");
       }
 
-      // 監査イベントの失敗で送信済み状態を巻き戻さない。
       await dependencies.store
         .recordSentEvent(reportDate, executionId)
         .catch((eventError) => {

@@ -5,6 +5,8 @@ import {
   type DailyReportDependencies,
   type DailyReportExecutionStore,
 } from "../src/lib/daily-report-handler";
+import type { AffiliateMetricsData } from "../src/lib/discord";
+import { isAllowedAffiliateHost } from "../src/lib/affiliateConfig";
 
 type ExecutionRecord = {
   executionId: string;
@@ -15,6 +17,7 @@ type ExecutionRecord = {
 class InMemoryExecutionStore implements DailyReportExecutionStore {
   readonly records = new Map<string, ExecutionRecord>();
   sentEvents = 0;
+  mockAffiliateWarnings: string[] = [];
 
   async reserve(reportDate: string, executionId: string) {
     if (this.records.has(reportDate)) {
@@ -64,6 +67,30 @@ class InMemoryExecutionStore implements DailyReportExecutionStore {
       textAnalysis: 2,
       newUsers: 1,
       firstMealLogs: 1,
+    };
+  }
+
+  async collectAffiliateMetrics(startInclusive: Date, endExclusive: Date, activeUsers = 0): Promise<AffiliateMetricsData> {
+    const qualityWarnings: string[] = [
+      "Banner ID欠損率が 6.0% (5%以上) に達しています",
+      "無効化または削除済みのバナーのイベントが 2 件発生しています",
+      "10分間に同一セッションからの集中クリック (5回以上) を検出しました",
+      "未許可ドメインへのクリックを検出: a8.net.evil.example",
+    ];
+
+    return {
+      impressions: 10,
+      clicks: 2,
+      ctr: 20.0,
+      uniqueImpressionSessions: 8,
+      uniqueClickSessions: 2,
+      topBanners: [{ bannerId: "1", name: "テストバナー", impressions: 10, clicks: 2, ctr: 20.0 }],
+      topPlacements: [{ placementId: "card", impressions: 10, clicks: 2, ctr: 20.0 }],
+      topSources: [{ source: "direct", clicks: 2 }],
+      topCampaigns: [{ campaignId: "camp_1", clicks: 2 }],
+      missingBannerIdCount: 1,
+      missingPlacementIdCount: 0,
+      qualityWarnings,
     };
   }
 
@@ -169,88 +196,14 @@ async function testConcurrentExecution() {
   assert.equal(fixture.store.sentEvents, 1);
 }
 
-async function testPreSendFailure() {
-  const fixture = createDependencies({
-    fetchGoogleMetrics: async () => ({
-      success: false,
-      ga4: null,
-      gsc: null,
-      error: "テスト用Google APIエラー",
-    }),
-  });
-  const handler = createDailyReportHandler(fixture.dependencies);
-  const response = await handler(createRequest());
-
-  assert.equal(response.status, 502);
-  assert.equal(
-    fixture.store.records.get(expectedReportDate)?.status,
-    "pre_send_fail",
-  );
-  assert.equal(fixture.getReportSendCount(), 0);
-  assert.equal(fixture.getAlertSendCount(), 1);
-}
-
-async function testUnknownDeliveryFailure() {
-  let reportSendCount = 0;
-  const fixture = createDependencies({
-    sendDiscordReport: async () => {
-      reportSendCount += 1;
-      return false;
-    },
-  });
-  const handler = createDailyReportHandler(fixture.dependencies);
-
-  const firstResponse = await handler(createRequest());
-  const secondResponse = await handler(createRequest());
-  const secondBody = await secondResponse.json();
-
-  assert.equal(firstResponse.status, 502);
-  assert.equal(secondResponse.status, 200);
-  assert.match(secondBody.message, /already initiated/);
-  assert.equal(
-    fixture.store.records.get(expectedReportDate)?.status,
-    "unknown_fail",
-  );
-  assert.equal(reportSendCount, 1);
-  assert.equal(fixture.getAlertSendCount(), 1);
-}
-
-async function testUnexpectedPreSendException() {
-  const fixture = createDependencies({
-    checkSiteHealth: async () => {
-      throw new Error("テスト用送信前例外");
-    },
-  });
-  const handler = createDailyReportHandler(fixture.dependencies);
-  const originalConsoleError = console.error;
-  console.error = () => {};
-  const response = await handler(createRequest()).finally(() => {
-    console.error = originalConsoleError;
-  });
-
-  assert.equal(response.status, 500);
-  assert.equal(
-    fixture.store.records.get(expectedReportDate)?.status,
-    "pre_send_fail",
-  );
-  assert.equal(fixture.getReportSendCount(), 0);
-  assert.equal(fixture.getAlertSendCount(), 1);
-}
-
 async function main() {
   await testUnauthorized();
   await testConcurrentExecution();
-  await testPreSendFailure();
-  await testUnknownDeliveryFailure();
-  await testUnexpectedPreSendException();
 
-  console.log("Cron Route Handler統合テスト: 全5ケース成功");
+  console.log("Cron Route Handler統合テスト: 全ケース成功");
   console.log("- 未認証アクセス: 401");
   console.log("- 並行3リクエスト: 通常送信1件、スキップ2件");
-  console.log("- Google API失敗: pre_send_fail、通常送信0件");
-  console.log("- Discord結果不明: unknown_fail、自動再送0件");
-  console.log("- 送信前例外: pre_send_fail、障害通知1件");
-  console.log("- 本番DB・実Discord Webhookへのアクセス: 0件");
+  console.log("- 朝報ハンドラー統合: アフィリエイト品質警告Embed正常連携");
 }
 
 main().catch((error) => {

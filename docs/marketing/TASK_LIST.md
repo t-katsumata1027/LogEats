@@ -34,7 +34,7 @@
 | DATA-012 | 登録・ログインイベントを実装する | Clerk webhook/callback | Codex | 未着手 | `sign_up`、`login`を流入元付きで取得 |
 | DATA-013 | 初回記録と継続を定義する | meal_logs集計 | Codex | 未着手 | first_log、D1、D7、D28を再現可能 |
 | DATA-014 | 共有イベントを実装する | NutritionResult、Dashboard | Codex | 未着手 | 作成、X、コピー、共有流入を取得 |
-| AFF-010 | バナーID・案件ID・配置を返す | affiliate API/DB | Codex | 未着手 | impression/clickを案件と配置へ帰属 |
+| AFF-010 | バナーID・案件ID・配置を返す | affiliate API/DB | Codex | 承認待ち | DDL管理API完全分離・マイグレーションSQL・1秒露出判定・キーボード重複解消・サーバーマスタ照合・PII/危険スキーム拒否・first_touch/last_touch構造化保存・安全設計検証スクリプト・隔離Postgres実機E2E・実ブラウザ操作検証・product_events DB突合 全パス |
 | AFF-011 | A8成果取込方式を決める | CSVまたはAPI | 人間＋Codex | 未着手 | 日次で発生・承認・確定を結合 |
 | REPORT-001 | 毎朝Discordレポートを実装する | scheduler、Discord webhook | Codex＋人間 | 未着手 | 毎日7時、再送、重複防止、失敗通知 |
 | PERF-001 | 公開と認証layoutを分離する | App Router | Codex | 未着手 | 公開ページが静的/ISR、認証UI維持 |

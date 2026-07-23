@@ -2,12 +2,14 @@ import {
   getClientAttribution,
   type ClientAttribution,
 } from "@/lib/clientAttribution";
+import type { AffiliateEventProperties } from "@/types/affiliate";
 
 export type TrackEventInput = {
   event_type: string;
   path: string;
   duration_ms?: number;
   action_detail?: string;
+  affiliate_properties?: AffiliateEventProperties;
 };
 
 type TrackEventPayload = TrackEventInput & {
@@ -36,11 +38,20 @@ export function sendAnalyticsEvent(event: TrackEventInput) {
     window.gtag &&
     GA_EVENT_TYPES.has(event.event_type)
   ) {
-    window.gtag("event", event.event_type, {
+    const gaParams: Record<string, unknown> = {
       page_path: event.path,
       engagement_time_msec: event.duration_ms,
       event_detail: event.action_detail,
-    });
+    };
+
+    if (event.affiliate_properties) {
+      gaParams.banner_id = event.affiliate_properties.banner_id;
+      gaParams.placement_id = event.affiliate_properties.placement_id;
+      gaParams.affiliate_network = event.affiliate_properties.affiliate_network;
+      gaParams.campaign_id = event.affiliate_properties.campaign_id;
+    }
+
+    window.gtag("event", event.event_type, gaParams);
   }
 }
 
