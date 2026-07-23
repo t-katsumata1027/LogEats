@@ -3,7 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 export const maxDuration = 60; // Vercel ホスティングにおけるAPIタイムアウトを最大化 (Proの場合は300など可能)
 
 import OpenAI from "openai";
-import { lookupFoodMasterWithLearned, loadLearnedFoods, addLearnedFood, defaultFoodMaster, type FoodMasterRecord } from "@/lib/foodDatabase";
+import {
+  lookupFoodMasterWithLearned,
+  loadLearnedFoods,
+  addLearnedFood,
+  buildLearnedFoodFromServing,
+  defaultFoodMaster,
+  type FoodMasterRecord,
+} from "@/lib/foodDatabase";
 import { sanitizeNutrition, calculateAtwaterCalories } from "@/lib/nutrition";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
 import { getDbUserId } from "@/auth";
@@ -11,6 +18,18 @@ import { put } from "@vercel/blob";
 import { sql } from "@vercel/postgres";
 import { logErrorAndNotify } from "@/lib/errorLogger";
 import { createRequestId, logStep } from "@/lib/analyzeLogger";
+import {
+  checkRateLimit,
+  exceedsContentLength,
+  rateLimitExceededResponse,
+} from "@/lib/requestSecurity";
+
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 const PROMPT = `あなたは食事解析の専門AIです。提供された画像から料理や食品を特定し、以下の手順で分析を行ってください。
 
@@ -315,29 +334,59 @@ export async function POST(request: NextRequest) {
   const useGemini = !!process.env.GEMINI_API_KEY;
   const useOpenAI = !!process.env.OPENAI_API_KEY;
   const requestId = createRequestId();
+  const startedAt = Date.now();
+  let userId: number | null = null;
 
   try {
+    if (exceedsContentLength(request, MAX_IMAGE_BYTES + 256 * 1024)) {
+      return NextResponse.json(
+        { error: "画像サイズは4MB以下にしてください。" },
+        { status: 413 }
+      );
+    }
+
+    const rateLimit = checkRateLimit(request, {
+      scope: "analyze-image",
+      limit: 20,
+      windowMs: 10 * 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return rateLimitExceededResponse(rateLimit.retryAfterSeconds);
+    }
+
     if (!useGemini && !useOpenAI) {
       return NextResponse.json(
-        {
-          error:
-            "GEMINI_API_KEY または OPENAI_API_KEY のどちらかを .env.local に設定してください。",
-        },
-        { status: 500 }
+        { error: "現在AI解析を利用できません。時間をおいて再度お試しください。" },
+        { status: 503 }
       );
     }
 
     const formData = await request.formData();
     const image = formData.get("image");
 
-    if (!image || !(image instanceof Blob)) {
+    if (!image || !(image instanceof File)) {
       return NextResponse.json({ error: "画像ファイルを送信してください。" }, { status: 400 });
     }
+    if (!ALLOWED_IMAGE_TYPES.has(image.type)) {
+      return NextResponse.json(
+        { error: "JPEG、PNG、WebP形式の画像を送信してください。" },
+        { status: 415 }
+      );
+    }
+    if (image.size <= 0 || image.size > MAX_IMAGE_BYTES) {
+      return NextResponse.json(
+        { error: "画像サイズは4MB以下にしてください。" },
+        { status: 413 }
+      );
+    }
+
+    userId = await getDbUserId();
 
     await logStep(requestId, "web", "START", {
       aiProvider: useGemini ? "gemini" : "openai",
-      imageSizeBytes: (image as Blob).size,
+      imageSizeBytes: image.size,
       mealType: formData.get("meal_type") ?? "unknown",
+      authState: userId ? "authenticated" : "anonymous",
     });
 
     // Node.js の Buffer ではなく Edge 環境で確実に安全な Base64 変換を利用する
@@ -400,6 +449,11 @@ export async function POST(request: NextRequest) {
           finalCalories: correctedFood.calories
         });
 
+        // スポット利用を含め、個人情報を含まない派生栄養データだけをfoodDBへ保存
+        await addLearnedFood(
+          name,
+          buildLearnedFoodFromServing(amount, correctedFood)
+        );
         foods.push(correctedFood);
         continue;
       }
@@ -495,41 +549,56 @@ export async function POST(request: NextRequest) {
     });
 
     // --- Phase 2: 画像をBlobへアップロードしDBに記録する ---
-    const userId = await getDbUserId();
     let imageUrl = null;
     let savedLogId = null;
     let share_id = null;
-    let short_id = generateShortId();
+    let short_id = userId ? generateShortId() : null;
 
-    // 1. 画像をVercel Blobへアップロード (public access)
-    try {
-      const ext = image.name?.split('.').pop() || 'jpg';
-      const blobFilename = `meals/${userId || 'guest'}_${Date.now()}.${ext}`;
-      const blobResult = await put(blobFilename, image, { access: 'public' });
-      imageUrl = blobResult.url;
-    } catch (e) {
-      console.error("Vercel Blob Upload Error:", e);
-      // 画像保存に失敗しても解析結果自体は返せるように続行
+    // 匿名ユーザーの画像と解析結果は永続保存しない
+    if (userId) {
+      try {
+        const extensionByType: Record<string, string> = {
+          "image/jpeg": "jpg",
+          "image/png": "png",
+          "image/webp": "webp",
+        };
+        const ext = extensionByType[image.type];
+        const blobFilename = `meals/${userId}_${Date.now()}.${ext}`;
+        const blobResult = await put(blobFilename, image, { access: "public" });
+        imageUrl = blobResult.url;
+      } catch (e) {
+        console.error("Vercel Blob Upload Error:", e);
+        // 画像保存に失敗しても解析結果自体は返せるように続行
+      }
     }
 
-    // 2. Postgres の meal_logs に記録を保存
-    try {
-      const mealType = (formData.get("meal_type") as string) || "other";
-      const validMealTypes = ["breakfast", "lunch", "dinner", "snack", "other"];
-      const safeMealType = validMealTypes.includes(mealType) ? mealType : "other";
+    // ログインユーザーのみPostgresへ食事記録を保存
+    if (userId) {
+      try {
+        const mealType = (formData.get("meal_type") as string) || "other";
+        const validMealTypes = [
+          "breakfast",
+          "lunch",
+          "dinner",
+          "snack",
+          "other",
+        ];
+        const safeMealType = validMealTypes.includes(mealType)
+          ? mealType
+          : "other";
 
-      // Parse logged_at if provided
-      const loggedAtRaw = formData.get("logged_at") as string | null;
-      let loggedAtValue: string | null = null;
-      if (loggedAtRaw) {
-        const parsed = new Date(loggedAtRaw);
-        if (!isNaN(parsed.getTime())) {
-          loggedAtValue = parsed.toISOString();
+        // logged_atが指定されている場合だけ正規化
+        const loggedAtRaw = formData.get("logged_at") as string | null;
+        let loggedAtValue: string | null = null;
+        if (loggedAtRaw) {
+          const parsed = new Date(loggedAtRaw);
+          if (!isNaN(parsed.getTime())) {
+            loggedAtValue = parsed.toISOString();
+          }
         }
-      }
 
-      const { rows } = loggedAtValue
-        ? await sql`
+        const { rows } = loggedAtValue
+          ? await sql`
           INSERT INTO meal_logs (
             user_id, image_url, total_calories, total_protein, 
             total_fat, total_carbs, analyzed_data, meal_type, logged_at, short_id
@@ -547,7 +616,7 @@ export async function POST(request: NextRequest) {
           )
           RETURNING id, share_id, short_id;
         `
-        : await sql`
+          : await sql`
           INSERT INTO meal_logs (
             user_id, image_url, total_calories, total_protein, 
             total_fat, total_carbs, analyzed_data, meal_type, short_id
@@ -564,30 +633,42 @@ export async function POST(request: NextRequest) {
           )
           RETURNING id, share_id, short_id;
         `;
-      if (rows.length > 0) {
-        savedLogId = rows[0].id;
-        share_id = rows[0].share_id;
-        short_id = rows[0].short_id;
-        await logStep(requestId, "web", "SAVED", { savedLogId, share_id, short_id, imageUrl });
-        return NextResponse.json({ foods, summary, savedLogId, share_id, short_id, is_ambiguous });
-      }
-    } catch (e) {
-      console.error("Database Insert Error:", e);
-    }
-
-    if (!userId) {
-      // 未ログイン状態の場合は analyze API の利用ログを記録
-      try {
-        await sql`
-          INSERT INTO access_logs (event_type, path)
-          VALUES ('anonymous_upload', '/api/analyze')
-        `;
+        if (rows.length > 0) {
+          savedLogId = rows[0].id;
+          share_id = rows[0].share_id;
+          short_id = rows[0].short_id;
+          await logStep(requestId, "web", "SAVED", {
+            savedLogId,
+            share_id,
+            short_id,
+            imageUrl,
+          });
+        }
       } catch (e) {
-        console.error("Failed to insert anonymous access log:", e);
+        console.error("Database Insert Error:", e);
       }
     }
 
-    return NextResponse.json({ foods, summary, savedLogId, share_id, short_id, is_ambiguous });
+    try {
+      await sql`
+        INSERT INTO access_logs (
+          user_id, event_type, path, duration_ms, action_detail
+        ) VALUES (
+          ${userId},
+          'analysis_success',
+          '/api/analyze',
+          ${Date.now() - startedAt},
+          ${`method=image;auth_state=${userId ? "authenticated" : "anonymous"}`}
+        )
+      `;
+    } catch (e) {
+      console.error("Failed to insert analysis event:", e);
+    }
+
+    return NextResponse.json(
+      { foods, summary, savedLogId, share_id, short_id, is_ambiguous },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch (e) {
     console.error("=== API Analysis Error ===", e);
     const err = e as { status?: number; message?: string; name?: string; stack?: string };
@@ -599,10 +680,9 @@ export async function POST(request: NextRequest) {
 
     await logErrorAndNotify("画像の解析", e, { useGemini: !!process.env.GEMINI_API_KEY });
 
-    let message = "画像の解析に失敗しました";
-    if (err.message) {
-      message += `: ${err.message}`;
-    }
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: "画像の解析に失敗しました。時間をおいて再度お試しください。" },
+      { status: 500 }
+    );
   }
 }

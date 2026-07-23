@@ -20,8 +20,11 @@ export async function GET() {
         const banner = rows[randomIndex];
 
         return NextResponse.json({ banner });
-    } catch (error: any) {
+    } catch (error) {
         console.error('Failed to fetch random affiliate banner:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to fetch affiliate banner' },
+            { status: 500 }
+        );
     }
 }

@@ -2,6 +2,9 @@ import Link from "next/link";
 
 export const metadata = {
     title: "利用規約",
+    alternates: {
+        canonical: "/terms",
+    },
 };
 
 export default function TermsPage() {

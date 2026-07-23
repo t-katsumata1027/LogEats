@@ -2,8 +2,17 @@ import { ReleaseNotes } from "@/components/ReleaseNotes";
 import Link from "next/link";
 
 export const metadata = {
-    title: "お知らせ | Log-Eats",
+    title: "お知らせ・記事",
     description: "Log-Eatsの最新のアップデートやお知らせ",
+    alternates: {
+        canonical: "/news",
+    },
+    openGraph: {
+        title: "お知らせ・記事 | Log-Eats",
+        description: "Log-Eatsの最新のアップデートやお知らせ",
+        url: "/news",
+        type: "website",
+    },
 };
 
 export default function NewsPage() {

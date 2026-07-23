@@ -7,6 +7,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { GoogleAnalytics } from '@next/third-parties/google';
+import { siteUrl } from "@/lib/site";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,7 +35,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://log-eats.vercel.app"),
+  metadataBase: new URL(siteUrl),
   title: {
     template: "%s | Log-Eats",
     default: "Log-Eats | 写真から栄養をチェック",
@@ -70,9 +71,6 @@ export const metadata: Metadata = {
     description: "面倒な食事管理を、もっとラクに、楽しく。食事の写真をアップロードするかテキストを入力するだけで、AIが瞬時に概算のカロリーとPFCを自動計算・記録するAI食事管理アプリです。",
     images: ["/og-image.png"],
   },
-  alternates: {
-    canonical: "/",
-  },
 };
 
 const customLocalization = {
@@ -89,16 +87,19 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const { userId } = await auth();
+  const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
   return (
     <ClerkProvider localization={customLocalization}>
       <html lang="ja" data-theme="pastel">
         <head>
-          <script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-1876950666503870"}`}
-            crossOrigin="anonymous"
-          ></script>
+          {adsenseClientId && (
+            <script
+              async
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
+              crossOrigin="anonymous"
+            ></script>
+          )}
         </head>
         <body className={`min-h-screen ${inter.variable} ${zenGothic.variable} font-sans antialiased bg-cream text-sage-900 flex flex-col ${userId ? "pb-20 sm:pb-0" : ""}`}>
           <EventTracker />

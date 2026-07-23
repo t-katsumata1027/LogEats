@@ -174,6 +174,7 @@ export function ImageUpload({
                 {!isAnalyzed && (
                   <button
                     type="button"
+                    data-track="analysis_submit_image"
                     onClick={onAnalyze}
                     disabled={loading || isCompressing}
                     className="btn bg-sage-600 hover:bg-sage-700 text-white border-none shadow-sm disabled:bg-sage-200 disabled:text-sage-400"

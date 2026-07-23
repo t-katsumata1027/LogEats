@@ -6,6 +6,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { NutritionResult } from "@/components/NutritionResult";
 import { NutritionSkeleton } from "@/components/NutritionSkeleton";
 import type { AnalyzedFood, NutritionSummary } from "@/lib/types";
+import { sendAnalyticsEvent, sendTrackEvent } from "@/lib/clientTracking";
 
 export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -35,6 +36,13 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
 
     const handleAnalyze = useCallback(async () => {
         if (!imageFile) return;
+        const startedAt = Date.now();
+        const actionDetail = `method=image;auth_state=${isLoggedIn ? "authenticated" : "anonymous"}`;
+        void sendTrackEvent({
+            event_type: "analysis_start",
+            path: "/",
+            action_detail: actionDetail,
+        });
         setLoading(true);
         setError(null);
         setResult(null);
@@ -59,8 +67,20 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 short_id: data.short_id,
                 isAmbiguous: data.is_ambiguous
             });
+            sendAnalyticsEvent({
+                event_type: "analysis_success",
+                path: "/",
+                duration_ms: Date.now() - startedAt,
+                action_detail: actionDetail,
+            });
         } catch (e) {
             setError(e instanceof Error ? e.message : "エラーが発生しました");
+            void sendTrackEvent({
+                event_type: "analysis_error",
+                path: "/",
+                duration_ms: Date.now() - startedAt,
+                action_detail: actionDetail,
+            });
         } finally {
             setLoading(false);
         }
@@ -83,6 +103,13 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
         setError(null);
         setResult(null);
         setManualProgress(0);
+        const startedAt = Date.now();
+        const actionDetail = `method=text;auth_state=${isLoggedIn ? "authenticated" : "anonymous"}`;
+        void sendTrackEvent({
+            event_type: "analysis_start",
+            path: "/",
+            action_detail: actionDetail,
+        });
 
         const progressInterval = setInterval(() => {
             setManualProgress(prev => {
@@ -120,9 +147,21 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                 short_id: data.short_id,
                 isAmbiguous: false // Text is explicit, not ambiguous
             });
+            sendAnalyticsEvent({
+                event_type: "analysis_success",
+                path: "/",
+                duration_ms: Date.now() - startedAt,
+                action_detail: actionDetail,
+            });
             // We do not clear manualText here so the user can see what they analyzed
         } catch (err) {
             setError(err instanceof Error ? err.message : 'エラーが発生しました');
+            void sendTrackEvent({
+                event_type: "analysis_error",
+                path: "/",
+                duration_ms: Date.now() - startedAt,
+                action_detail: actionDetail,
+            });
         } finally {
             clearInterval(progressInterval);
             setIsManualSubmitting(false);
@@ -134,12 +173,14 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
             <div className="flex justify-center mb-6">
                 <div className="join bg-sage-50/50 p-1 rounded-xl shadow-sm border border-sage-200">
                     <button
+                        data-track="analysis_tab_image"
                         className={`join-item btn btn-sm border-none ${activeTab === 'image' ? 'bg-white text-sage-800 shadow-sm' : 'bg-transparent text-sage-500 hover:bg-sage-100/50'}`}
                         onClick={() => setActiveTab('image')}
                     >
                         📸 写真で解析
                     </button>
                     <button
+                        data-track="analysis_tab_text"
                         className={`join-item btn btn-sm border-none ${activeTab === 'text' ? 'bg-white text-sage-800 shadow-sm' : 'bg-transparent text-sage-500 hover:bg-sage-100/50'}`}
                         onClick={() => setActiveTab('text')}
                     >
@@ -221,6 +262,7 @@ export function AnalyzerClient({ isLoggedIn = false }: { isLoggedIn?: boolean })
                         {!result ? (
                             <div className="flex flex-col gap-2">
                                 <button
+                                    data-track="analysis_submit_text"
                                     onClick={handleManualLog}
                                     disabled={isManualSubmitting || !manualText.trim()}
                                     className="btn w-full bg-sage-600 text-white hover:bg-sage-700 border-none shadow-sm disabled:bg-sage-200 disabled:text-sage-400 text-sm font-bold"

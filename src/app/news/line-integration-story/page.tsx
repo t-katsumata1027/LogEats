@@ -2,8 +2,17 @@ import Link from "next/link";
 import { ArrowLeft, Clock, Calendar, Tag } from "lucide-react";
 
 export const metadata = {
-    title: "【個人開発】LINE連携機能で二重ログインの罠にハマった話 | Log-Eats",
+    title: "【個人開発】LINE連携機能で二重ログインの罠にハマった話",
     description: "万年ダイエッターが作った食事管理アプリにLINE連携機能をつけたら、二重ログインの罠にハマった話。個人開発の苦労と解決策を公開。",
+    alternates: {
+        canonical: "/news/line-integration-story",
+    },
+    openGraph: {
+        title: "【個人開発】LINE連携機能で二重ログインの罠にハマった話 | Log-Eats",
+        description: "万年ダイエッターが作った食事管理アプリにLINE連携機能をつけたら、二重ログインの罠にハマった話。",
+        url: "/news/line-integration-story",
+        type: "article",
+    },
 };
 
 export default function ArticlePage() {

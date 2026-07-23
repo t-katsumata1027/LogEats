@@ -1,10 +1,82 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { sendTrackEvent } from '@/lib/clientTracking';
 
 interface AffiliateBannerProps {
     variant?: 'card' | 'simple';
     className?: string;
+}
+
+function sanitizeAffiliateHtml(html: string): string {
+    const parser = new DOMParser();
+    const document = parser.parseFromString(html, 'text/html');
+    const allowedTags = new Set(['A', 'IMG', 'DIV', 'SPAN', 'P', 'BR']);
+    const globalAllowedAttributes = new Set([
+        'class',
+        'title',
+        'aria-label',
+        'width',
+        'height',
+        'alt',
+    ]);
+    const isAllowedAffiliateUrl = (value: string) => {
+        const url = new URL(value, window.location.origin);
+        return (
+            url.protocol === 'https:' &&
+            (url.hostname === 'a8.net' || url.hostname.endsWith('.a8.net'))
+        );
+    };
+
+    document.body.querySelectorAll('*').forEach((element) => {
+        if (!allowedTags.has(element.tagName)) {
+            element.remove();
+            return;
+        }
+
+        Array.from(element.attributes).forEach((attribute) => {
+            const name = attribute.name.toLowerCase();
+            const isLinkAttribute =
+                element.tagName === 'A' && name === 'href';
+            const isImageAttribute =
+                element.tagName === 'IMG' && name === 'src';
+
+            if (
+                name.startsWith('on') ||
+                (!globalAllowedAttributes.has(name) &&
+                    !isLinkAttribute &&
+                    !isImageAttribute)
+            ) {
+                element.removeAttribute(attribute.name);
+            }
+        });
+
+        if (element instanceof HTMLAnchorElement) {
+            try {
+                if (!isAllowedAffiliateUrl(element.href)) {
+                    element.removeAttribute('href');
+                }
+            } catch {
+                element.removeAttribute('href');
+            }
+            element.target = '_blank';
+            element.rel = 'sponsored noopener noreferrer';
+        }
+
+        if (element instanceof HTMLImageElement) {
+            try {
+                if (!isAllowedAffiliateUrl(element.src)) {
+                    element.removeAttribute('src');
+                }
+            } catch {
+                element.removeAttribute('src');
+            }
+            element.loading = 'lazy';
+            element.decoding = 'async';
+        }
+    });
+
+    return document.body.innerHTML;
 }
 
 /**
@@ -25,13 +97,17 @@ export function AffiliateBanner({ variant = 'card', className = '' }: AffiliateB
                 
                 const data = await res.json();
                 if (isMounted && data.banner && data.banner.html_content) {
-                    // リンクを別タブで開くように HTML を加工
-                    // <a> タグに target="_blank" と rel="noopener noreferrer" を付与
-                    const modifiedHtml = data.banner.html_content.replace(
-                        /<a\s+(?![^>]*target=)/gi, 
-                        '<a target="_blank" rel="noopener noreferrer" '
+                    const sanitizedHtml = sanitizeAffiliateHtml(
+                        data.banner.html_content
                     );
-                    setHtml(modifiedHtml);
+                    if (sanitizedHtml) {
+                        setHtml(sanitizedHtml);
+                        void sendTrackEvent({
+                            event_type: 'affiliate_impression',
+                            path: window.location.pathname,
+                            action_detail: `placement=${variant}`,
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Failed to fetch affiliate banner:', error);
@@ -47,7 +123,7 @@ export function AffiliateBanner({ variant = 'card', className = '' }: AffiliateB
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [variant]);
 
     if (loading || !html) {
         return null;
@@ -62,6 +138,13 @@ export function AffiliateBanner({ variant = 'card', className = '' }: AffiliateB
             )}
             <div 
                 className={`w-full flex justify-center overflow-hidden ${isSimple ? '' : 'rounded-xl bg-white/50 border border-sage-100/50 p-2 shadow-sm'}`}
+                onClickCapture={() => {
+                    void sendTrackEvent({
+                        event_type: 'affiliate_click',
+                        path: window.location.pathname,
+                        action_detail: `placement=${variant}`,
+                    });
+                }}
                 dangerouslySetInnerHTML={{ __html: html }} 
             />
         </div>

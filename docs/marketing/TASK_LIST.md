@@ -8,20 +8,22 @@
 
 | ID | タスク | 主な対象 | 担当 | 状態 | 完了条件 |
 |---|---|---|---|---|---|
-| SEO-001 | robots.txtを公開する | `src/middleware.ts`、`src/app/robots.ts` | Codex | 未着手 | 本番200、UTF-8、正しいSitemap行 |
-| SEO-002 | sitemap.xmlを公開する | `src/middleware.ts`、`src/app/sitemap.ts` | Codex | 未着手 | 本番200、wwwの絶対URL、GSC送信 |
-| ADS-001 | ads.txtを公開する | `src/middleware.ts`、`public/ads.txt` | Codex | 未着手 | 本番200、AdSense管理画面で認識 |
-| SEO-003 | canonical継承を修正する | `src/app/layout.tsx`、公開各ページ | Codex | 未着手 | index対象ページが自己canonical |
-| SEO-004 | title二重化と固有OGを修正する | ニュース、記事、規約、privacy | Codex | 未着手 | `Log-Eats | Log-Eats`が0件 |
+| SEO-001 | robots.txtを公開する | `src/middleware.ts`、`src/app/robots.ts` | Codex | 進行中 | ローカル200確認済み。本番200と正しいSitemap行を確認 |
+| SEO-002 | sitemap.xmlを公開する | `src/middleware.ts`、`src/app/sitemap.ts` | Codex | 進行中 | ローカル200・www絶対URL確認済み。本番確認とGSC送信 |
+| ADS-001 | ads.txtを公開する | `src/middleware.ts`、`public/ads.txt` | Codex | 進行中 | ローカル200確認済み。本番200とAdSense管理画面で認識 |
+| SEO-003 | canonical継承を修正する | `src/app/layout.tsx`、公開各ページ | Codex | 完了 | index対象5ページの自己canonicalをローカル確認 |
+| SEO-004 | title二重化と固有OGを修正する | ニュース、記事、規約、privacy | Codex | 完了 | 公開5ページのtitleと固有OGをローカル確認 |
 | SEO-005 | Search Consoleを接続する | Google Search Console | 人間 | 未着手 | DNSまたはHTML確認、sitemap送信 |
-| DATA-001 | `/api/track`を安全に公開する | middleware、track API | Codex | 未着手 | 匿名計測成功、allowlist、長さ制限、rate limit |
-| DATA-002 | 画像匿名イベントの到達不能を修正する | analyze API | Codex | 未着手 | 成功・失敗ログの統合テスト |
-| DATA-003 | 解析3イベントをGA4へ送る | AnalyzerClient、各API | Codex | 未着手 | DebugViewで画像・テキスト・匿名・ログインを確認 |
-| PRIV-001 | 匿名解析画像の自動公開を停止する | analyze/manual API、Blob | Codex＋人間 | 未着手 | 匿名解析だけでは公開URLを作らない |
-| PRIV-002 | 共有をopt-in、noindex、失効可能にする | share routes | Codex＋人間 | 未着手 | noindex、失効、削除、期限のテスト |
-| API-001 | 公開AI APIを防御する | analyze/manual API | Codex | 未着手 | MIME、容量、文字数、rate limit、quota |
-| LEGAL-001 | プライバシー説明を実装と一致させる | privacy、GA4、広告、AI | 人間＋専門家 | 未着手 | GA4、Vercel、AI、Blob、広告、保存・削除を記載 |
-| SEC-001 | 広告HTMLをsanitizeする | AffiliateBanner、広告DB | Codex | 未着手 | script禁止、許可ドメイン、sponsored属性 |
+| DATA-001 | `/api/track`を安全に公開する | middleware、track API | Codex | 進行中 | 公開、allowlist、長さ制限、rate limit実装済み。本番DB書込を確認 |
+| DATA-002 | 画像匿名イベントの到達不能を修正する | analyze API | Codex | 進行中 | 到達不能を解消済み。本番で画像・テキスト成功ログを確認 |
+| DATA-003 | 解析3イベントをGA4へ送る | AnalyzerClient、各API | Codex | 進行中 | `analysis_start/success/error`実装済み。DebugViewで確認 |
+| DATA-004 | スポット解析の派生栄養データをfoodDBへ保存する | analyze/manual API、foodDatabase | Codex | 完了 | 生画像・入力文・識別子を除外し、新規推定・ラベル値だけを検証して保存 |
+| PRIV-001 | 匿名解析画像の自動公開を停止する | analyze/manual API、Blob | Codex＋人間 | 完了 | 匿名時はBlob、meal_logs、共有IDへ保存しない |
+| PRIV-002 | 共有をopt-in、noindex、失効可能にする | share routes | Codex＋人間 | 進行中 | noindex実装済み。失効、削除、期限は未実装 |
+| API-001 | 公開AI APIを防御する | analyze/manual API | Codex | 進行中 | MIME、容量、文字数、アプリ内rate limit実装済み。Vercel Firewallと日次quotaは未設定 |
+| LEGAL-001 | プライバシー説明を実装と一致させる | privacy、GA4、広告、AI | 人間＋専門家 | 承認待ち | 実装内容へ更新済み。公開前に専門家レビュー |
+| SEC-001 | 広告HTMLをsanitizeする | AffiliateBanner、広告DB | Codex | 完了 | A8ドメインのみ許可、危険タグ・属性を除去、`sponsored`付与 |
+| SEC-002 | 依存パッケージの重大脆弱性を更新する | `package-lock.json` | Codex | 進行中 | 19件から3件へ削減。Next.jsメジャー更新を伴う残件は別途検証 |
 
 ## P1: 10日以内
 
@@ -91,4 +93,3 @@
 - 水曜: 技術SEO、クロール、速度、計測欠損の確認
 - 金曜: 収益、EPC、承認率、投稿品質事故の確認
 - 日曜: 翌週の実験を最大3件に絞る
-

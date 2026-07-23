@@ -16,6 +16,15 @@ export const metadata: Metadata = {
   title: "Log-Eats | 写真を撮るだけのAI食事管理・カロリー計算アプリ",
   description: "【無料】食事の写真をアップロードするだけでAIがカロリーとPFCバランス（タンパク質・脂質・炭水化物）を自動計算。LINE連携でさらに便利に。面倒な食事記録をスマートに自動化します。",
   keywords: ["AI食事管理", "カロリー計算 アプリ", "PFCバランス 自動", "食事記録 写真", "ダイエット アプリ 無料", "Log-Eats"],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Log-Eats | 写真を撮るだけのAI食事管理・カロリー計算アプリ",
+    description: "食事の写真やテキストから、カロリーとPFCバランスの目安を無料で確認できます。",
+    url: "/",
+    type: "website",
+  },
 };
 
 export default async function Home() {

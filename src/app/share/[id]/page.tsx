@@ -41,10 +41,17 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
   return {
     title,
     description,
+    robots: {
+      index: false,
+      follow: false,
+      noarchive: true,
+      noimageindex: true,
+    },
     openGraph: {
       title,
       description,
       type: "website",
+      url: `/share/${id}`,
       images: [
         {
           url: ogImageUrl,

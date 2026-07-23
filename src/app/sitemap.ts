@@ -1,36 +1,35 @@
 import { MetadataRoute } from "next";
+import { absoluteUrl } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://log-eats.vercel.app";
-
     return [
         {
-            url: baseUrl,
-            lastModified: new Date(),
+            url: absoluteUrl("/"),
+            lastModified: new Date("2026-07-23"),
             changeFrequency: "weekly",
             priority: 1,
         },
         {
-            url: `${baseUrl}/news`,
-            lastModified: new Date(),
+            url: absoluteUrl("/news"),
+            lastModified: new Date("2026-07-23"),
             changeFrequency: "weekly",
             priority: 0.8,
         },
         {
-            url: `${baseUrl}/news/line-integration-story`,
-            lastModified: new Date(),
+            url: absoluteUrl("/news/line-integration-story"),
+            lastModified: new Date("2024-03-11"),
             changeFrequency: "monthly",
             priority: 0.7,
         },
         {
-            url: `${baseUrl}/terms`,
-            lastModified: new Date(),
+            url: absoluteUrl("/terms"),
+            lastModified: new Date("2026-07-23"),
             changeFrequency: "monthly",
             priority: 0.5,
         },
         {
-            url: `${baseUrl}/privacy`,
-            lastModified: new Date(),
+            url: absoluteUrl("/privacy"),
+            lastModified: new Date("2026-07-23"),
             changeFrequency: "monthly",
             priority: 0.5,
         },

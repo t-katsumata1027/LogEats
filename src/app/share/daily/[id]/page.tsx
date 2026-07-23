@@ -66,10 +66,17 @@ export async function generateMetadata({ params }: DailySharePageProps): Promise
   return {
     title,
     description,
+    robots: {
+      index: false,
+      follow: false,
+      noarchive: true,
+      noimageindex: true,
+    },
     openGraph: {
       title,
       description,
       type: "website",
+      url: `/share/daily/${id}`,
       images: [{ url: ogImageUrl, width: 1200, height: 630 }],
     },
     twitter: {

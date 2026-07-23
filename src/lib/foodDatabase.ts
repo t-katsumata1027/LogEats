@@ -87,10 +87,38 @@ export async function loadLearnedFoods(): Promise<Record<string, FoodMasterRecor
 
 /** 
  * 学習済みに1件追加する処理。
- * Vercel Postgres を利用しクラウド上のDBに永続化させます。（重複する名前の場合は上書き更新）
+ * Vercel Postgresへ永続化し、既存の検証済み値は自動で上書きしません。
  */
 export async function addLearnedFood(name: string, record: FoodMasterRecord): Promise<void> {
-  const key = normalize(name.trim());
+  const trimmedName = name.trim();
+  const key = normalize(trimmedName);
+  const values = [
+    record.standard_weight_g,
+    record.per_100g.calories,
+    record.per_100g.protein,
+    record.per_100g.fat,
+    record.per_100g.carbs,
+  ];
+
+  // 公開解析からのDB汚染を防ぐため、名称と栄養値を保存前に制限する
+  if (
+    trimmedName.length < 2 ||
+    trimmedName.length > 120 ||
+    values.some((value) => !Number.isFinite(value)) ||
+    record.standard_weight_g <= 0 ||
+    record.standard_weight_g > 5000 ||
+    record.per_100g.calories < 0 ||
+    record.per_100g.calories > 2000 ||
+    record.per_100g.protein < 0 ||
+    record.per_100g.protein > 500 ||
+    record.per_100g.fat < 0 ||
+    record.per_100g.fat > 500 ||
+    record.per_100g.carbs < 0 ||
+    record.per_100g.carbs > 500
+  ) {
+    console.warn(`[DB] Learned food rejected: ${key}`);
+    return;
+  }
 
   try {
     await sql`
@@ -104,17 +132,51 @@ export async function addLearnedFood(name: string, record: FoodMasterRecord): Pr
         ${record.per_100g.fat}, 
         ${record.per_100g.carbs}
       )
-      ON CONFLICT (name) DO UPDATE SET
-        standard_weight_g = EXCLUDED.standard_weight_g,
-        calories = EXCLUDED.calories,
-        protein = EXCLUDED.protein,
-        fat = EXCLUDED.fat,
-        carbs = EXCLUDED.carbs;
+      ON CONFLICT (name) DO NOTHING;
     `;
     console.log(`[DB] Learned food saved: ${key}`);
   } catch (err: any) {
     console.error("Failed to save learned food to DB:", err.message);
   }
+}
+
+/**
+ * 1食分の解析結果をfoodDBの100g基準へ変換します。
+ * 生画像、入力文、ユーザー識別子は含めません。
+ */
+export function buildLearnedFoodFromServing(
+  amount: string | undefined,
+  nutrition: {
+    calories: number;
+    protein: number;
+    fat: number;
+    carbs: number;
+  }
+): FoodMasterRecord {
+  const weightMatch = amount?.match(
+    /([0-9０-９]+(?:\.[0-9０-９]+)?)\s*(g|グラム|ml|ミリリットル)/i
+  );
+  const parsedWeight = weightMatch
+    ? Number(
+        weightMatch[1].replace(/[０-９]/g, (character) =>
+          String.fromCharCode(character.charCodeAt(0) - 0xfee0)
+        )
+      )
+    : 100;
+  const standardWeight =
+    Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 100;
+  const per100Ratio = 100 / standardWeight;
+
+  return {
+    unit_name: amount?.trim() || "1食分",
+    standard_weight_g: standardWeight,
+    per_100g: {
+      calories: nutrition.calories * per100Ratio,
+      protein: nutrition.protein * per100Ratio,
+      fat: nutrition.fat * per100Ratio,
+      carbs: nutrition.carbs * per100Ratio,
+    },
+  };
 }
 
 /**

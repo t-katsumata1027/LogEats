@@ -11,8 +11,15 @@ import {
   type FoodMasterRecord,
 } from "@/lib/foodDatabase";
 import type { AnalyzedFood } from "@/lib/types";
+import {
+  checkRateLimit,
+  exceedsContentLength,
+  rateLimitExceededResponse,
+} from "@/lib/requestSecurity";
 
 export const maxDuration = 60;
+const MAX_TEXT_LENGTH = 500;
+const MAX_BODY_BYTES = 16 * 1024;
 
 // ---- AI プロンプト ----
 
@@ -210,12 +217,48 @@ async function estimateNutritionWithAI(
 // ---- POST ハンドラー ----
 
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
   try {
-    const userId = await getDbUserId();
-    const isGuest = !userId;
+    if (exceedsContentLength(request, MAX_BODY_BYTES)) {
+      return NextResponse.json(
+        { error: "入力内容が長すぎます。" },
+        { status: 413 }
+      );
+    }
 
-    const body = await request.json();
-    const { text, meal_type: bodyMealType, logged_at } = body;
+    const rateLimit = checkRateLimit(request, {
+      scope: "analyze-text",
+      limit: 30,
+      windowMs: 10 * 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return rateLimitExceededResponse(rateLimit.retryAfterSeconds);
+    }
+
+    const userId = await getDbUserId();
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "JSON形式の入力を送信してください。" },
+        { status: 400 }
+      );
+    }
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "入力内容が不正です。" }, { status: 400 });
+    }
+
+    const {
+      text,
+      meal_type: bodyMealType,
+      logged_at,
+    } = body as {
+      text?: unknown;
+      meal_type?: unknown;
+      logged_at?: unknown;
+    };
 
     if (!text || typeof text !== "string" || text.trim().length === 0) {
       return NextResponse.json(
@@ -223,10 +266,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (text.trim().length > MAX_TEXT_LENGTH) {
+      return NextResponse.json(
+        { error: `食事内容は${MAX_TEXT_LENGTH}文字以内で入力してください。` },
+        { status: 400 }
+      );
+    }
 
     // logged_at の検証（ISO文字列 or 無し）
     let loggedAtValue: string | null = null;
-    if (logged_at) {
+    if (typeof logged_at === "string") {
       const parsed = new Date(logged_at);
       if (!isNaN(parsed.getTime())) {
         loggedAtValue = parsed.toISOString();
@@ -298,15 +347,20 @@ export async function POST(request: NextRequest) {
     // bodyMealType が指定された場合はそちらを優先、なければAI推定値を使う
     const validMealTypes = ["breakfast", "lunch", "dinner", "snack", "other"];
     const safeMealType =
-      bodyMealType && validMealTypes.includes(bodyMealType)
+      typeof bodyMealType === "string" && validMealTypes.includes(bodyMealType)
         ? bodyMealType
         : validMealTypes.includes(aiMealType)
           ? aiMealType
           : "other";
 
-    // Step 3: DB に保存 (ログイン時のみ)
-    const shortIdValue = generateShortId();
-    const { rows } = loggedAtValue
+    // Step 3: ログインユーザーのみDBへ保存
+    let savedLogId = null;
+    let share_id = null;
+    let short_id = null;
+
+    if (userId) {
+      const shortIdValue = generateShortId();
+      const { rows } = loggedAtValue
       ? await sql`
           INSERT INTO meal_logs (
             user_id, image_url, total_calories, total_protein,
@@ -343,34 +397,42 @@ export async function POST(request: NextRequest) {
           RETURNING id, share_id, short_id;
         `;
 
-    const savedLogId = rows[0]?.id ?? null;
-    const share_id = rows[0]?.share_id ?? null;
-    const short_id = rows[0]?.short_id ?? null;
-
-    if (!userId) {
-      // 未ログイン状態の場合はアクセスログのみ記録
-      try {
-        await sql`
-          INSERT INTO access_logs (event_type, path)
-          VALUES ('anonymous_text_log', '/api/logs/manual')
-        `;
-      } catch (e) {
-        console.error("Failed to insert anonymous access log:", e);
-      }
+      savedLogId = rows[0]?.id ?? null;
+      share_id = rows[0]?.share_id ?? null;
+      short_id = rows[0]?.short_id ?? null;
     }
 
-    return NextResponse.json({
-      success: true,
-      savedLogId,
-      share_id: share_id,
-      short_id: short_id,
-      foods,
-      totalCalories,
-      totalProtein,
-      totalFat,
-      totalCarbs,
-      meal_type: safeMealType,
-    });
+    try {
+      await sql`
+        INSERT INTO access_logs (
+          user_id, event_type, path, duration_ms, action_detail
+        ) VALUES (
+          ${userId},
+          'analysis_success',
+          '/api/logs/manual',
+          ${Date.now() - startedAt},
+          ${`method=text;auth_state=${userId ? "authenticated" : "anonymous"}`}
+        )
+      `;
+    } catch (e) {
+      console.error("Failed to insert analysis event:", e);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        savedLogId,
+        share_id,
+        short_id,
+        foods,
+        totalCalories,
+        totalProtein,
+        totalFat,
+        totalCarbs,
+        meal_type: safeMealType,
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch (error) {
     console.error("Failed to create manual log:", error);
     await logErrorAndNotify("テキストでの食事記録", error);

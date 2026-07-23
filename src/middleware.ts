@@ -4,6 +4,7 @@ const isPublicRoute = createRouteMatcher([
     '/',
     '/api/logs/manual(.*)',    // 公開API（未ログインでも利用可）
     '/api/analyze(.*)',        // 公開API（未ログインでも利用可）
+    '/api/track',              // 匿名ユーザーを含む行動計測
     '/api/webhooks/(.*)',      // ClerkやLINEのWebhook用ルート
     '/terms',
     '/privacy',
@@ -11,6 +12,10 @@ const isPublicRoute = createRouteMatcher([
     '/share(.*)',              // 公開シェアページ
     '/s/(.*)',                 // 短縮URLシェアページ
     '/api/affiliates/random',  // アフィリエイト広告取得API（公開）
+    '/robots.txt',
+    '/sitemap.xml',
+    '/ads.txt',
+    '/manifest.webmanifest',
 ])
 
 export default clerkMiddleware(async (auth, request) => {

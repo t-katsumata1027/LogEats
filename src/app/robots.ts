@@ -1,14 +1,22 @@
 import { MetadataRoute } from "next";
+import { absoluteUrl } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://log-eats.vercel.app";
-
     return {
         rules: {
             userAgent: "*",
             allow: "/",
-            disallow: ["/api/", "/admin/"],
+            disallow: [
+                "/api/",
+                "/admin/",
+                "/dashboard",
+                "/settings",
+                "/sso-callback",
+                "/share/",
+                "/s/",
+            ],
         },
-        sitemap: `${baseUrl}/sitemap.xml`,
+        sitemap: absoluteUrl("/sitemap.xml"),
+        host: absoluteUrl("/"),
     };
 }

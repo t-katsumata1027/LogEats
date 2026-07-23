@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { sendTrackEvent } from "@/lib/clientTracking";
 
 export function EventTracker() {
     const pathname = usePathname();
@@ -15,27 +16,21 @@ export function EventTracker() {
         // Pathname毎のPV記録（重複防止）
         if (trackedPageView.current !== pathname) {
             trackedPageView.current = pathname;
-            fetch("/api/track", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ event_type: "page_view", path: pathname }),
-            }).catch((err) => console.error("Tracking error:", err));
+            void sendTrackEvent({ event_type: "page_view", path: pathname });
         }
 
         // ページ離脱時（アンマウント）に滞在時間を送信
         return () => {
             const duration = Date.now() - startTimeStamp.current;
             // FetchAPIはunmount時にはキャンセルされる可能性があるためkeepaliveを使用
-            fetch("/api/track", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
+            void sendTrackEvent(
+                {
                     event_type: "page_leave",
                     path: pathname,
                     duration_ms: duration
-                }),
-                keepalive: true
-            }).catch((err) => console.error("Tracking duration error:", err));
+                },
+                { keepalive: true }
+            );
         };
     }, [pathname]);
 
@@ -48,15 +43,11 @@ export function EventTracker() {
 
             if (trackableEl) {
                 const actionDetail = trackableEl.getAttribute('data-track');
-                fetch("/api/track", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        event_type: "click",
-                        path: pathname,
-                        action_detail: actionDetail
-                    }),
-                }).catch((err) => console.error("Tracking click error:", err));
+                void sendTrackEvent({
+                    event_type: "click",
+                    path: pathname,
+                    action_detail: actionDetail || undefined
+                });
             }
         };
 
