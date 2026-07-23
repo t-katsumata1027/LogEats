@@ -46,3 +46,4 @@ yarn-error.log*
 scripts/dev-db-hook.ts
 scripts/query-matched-events.ts
 scripts/seed-preview-banners.ts
+.vercel
