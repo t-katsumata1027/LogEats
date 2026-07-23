@@ -15,7 +15,7 @@ export default async function SettingsPage() {
     if (dbUserId) {
         try {
             const { rows } = await sql`
-                SELECT target_calories, age, gender, height, weight, activity_level, target_weight, target_protein, target_fat, target_carbs, tolerance_pct
+                SELECT line_user_id, target_calories, age, gender, height, weight, activity_level, target_weight, target_protein, target_fat, target_carbs, tolerance_pct
                 FROM users 
                 WHERE id = ${dbUserId} 
                 LIMIT 1
@@ -60,7 +60,7 @@ export default async function SettingsPage() {
                         <SettingsForm initialData={userData} />
 
                         {/* LINE連携 */}
-                        <LineConnectionSettings />
+                        <LineConnectionSettings isConnected={Boolean(userData?.line_user_id)} />
 
                         {/* お問い合わせセクション */}
                         <div className="bg-sage-50 rounded-2xl p-6 border border-sage-100 shadow-sm mt-8">

@@ -13,29 +13,23 @@ export async function POST(req: Request) {
         });
     }
 
-    // Get the headers
     const headerPayload = await headers();
     const svix_id = headerPayload.get("svix-id");
     const svix_timestamp = headerPayload.get("svix-timestamp");
     const svix_signature = headerPayload.get("svix-signature");
 
-    // If there are no headers, error out
     if (!svix_id || !svix_timestamp || !svix_signature) {
         return new Response('Error occured -- no svix headers', {
             status: 400
         });
     }
 
-    // Get the body
     const payload = await req.json();
     const body = JSON.stringify(payload);
 
-    // Create a new Svix instance with your secret.
     const wh = new Webhook(WEBHOOK_SECRET);
-
     let evt: WebhookEvent;
 
-    // Verify the payload with the headers
     try {
         evt = wh.verify(body, {
             "svix-id": svix_id,
@@ -52,26 +46,19 @@ export async function POST(req: Request) {
     const eventType = evt.type;
 
     if (eventType === 'user.created' || eventType === 'user.updated') {
-        const { id, email_addresses, first_name, last_name, external_accounts } = evt.data;
+        const { id, email_addresses, first_name, last_name } = evt.data;
         const email = email_addresses?.[0]?.email_address || 'Unknown';
         const name = [first_name, last_name].filter(Boolean).join(' ') || 'Unknown';
 
-        // Find LINE external account
-        const lineAccount = (external_accounts || []).find(
-            (acc: any) => acc.provider === 'oauth_line'
-        );
-        const lineUserId = lineAccount ? lineAccount.provider_user_id || lineAccount.id : null;
-
         if (eventType === 'user.created') {
-            // Insert to users table optionally if not already done by auth.ts
             try {
+                // line_user_id は Messaging API 連携でのみ管理し、Clerk Webhook では設定しない
                 await sql`
-                    INSERT INTO users (clerk_id, email, name, line_user_id)
-                    VALUES (${id}, ${email}, ${name}, ${lineUserId})
+                    INSERT INTO users (clerk_id, email, name)
+                    VALUES (${id}, ${email}, ${name})
                     ON CONFLICT (clerk_id) DO UPDATE SET 
                         email = EXCLUDED.email, 
-                        name = EXCLUDED.name,
-                        line_user_id = COALESCE(users.line_user_id, EXCLUDED.line_user_id)
+                        name = EXCLUDED.name
                 `;
             } catch (e) {
                 console.error('Error inserting user:', e);
@@ -80,33 +67,23 @@ export async function POST(req: Request) {
             await sendLarkNotification(
                 process.env.LARK_AUTH_WEBHOOK_URL,
                 "🎉 新規ユーザー登録",
-                `新しいユーザーが登録されました！\nID: ${id}\nEmail: ${email}\nName: ${name}\nLINE連携: ${lineUserId ? '済み' : 'なし'}`
+                `新しいユーザーが登録されました！\nID: ${id}\nEmail: ${email}\nName: ${name}`
             );
         } else if (eventType === 'user.updated') {
-            // User updated - they might have linked a LINE account
+            // ユーザー情報（名前・メール）のみ更新。line_user_id は更新・解除しない
             try {
-                if (lineUserId) {
-                    await sql`
-                        UPDATE users 
-                        SET line_user_id = ${lineUserId} 
-                        WHERE clerk_id = ${id} AND (line_user_id IS NULL OR line_user_id != ${lineUserId})
-                    `;
-                } else {
-                    // Update to NULL if they unlinked
-                    await sql`
-                        UPDATE users 
-                        SET line_user_id = NULL 
-                        WHERE clerk_id = ${id} AND line_user_id IS NOT NULL
-                    `;
-                }
+                await sql`
+                    UPDATE users
+                    SET email = ${email}, name = ${name}
+                    WHERE clerk_id = ${id}
+                `;
             } catch (e) {
-                console.error('Error updating config:', e);
+                console.error('Error updating user info:', e);
             }
         }
     } else if (eventType === 'session.created') {
         const { user_id } = evt.data;
 
-        // Optional: get user details from DB to enrich message
         let userName = 'Unknown';
         try {
             const { rows } = await sql`SELECT name, email FROM users WHERE clerk_id = ${user_id} LIMIT 1`;

@@ -20,6 +20,7 @@ async function applyOfficialMigrations(poolAdapter: any) {
     "scripts/migrations/20260723_core_schema.sql",
     "scripts/migrations/20260723_product_events.sql",
     "scripts/migrations/20260723_cron_report_executions.sql",
+    "scripts/migrations/20260723_line_account_link_requests.sql",
   ];
 
   for (const relPath of migrationFiles) {

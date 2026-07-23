@@ -3,6 +3,34 @@
 ## [Unreleased] - 2026-07-23
 
 ### 追加 (Added)
+- **LINE Messaging API アカウント連携（自己解決型移行）**
+  - **DBマイグレーション**: `line_account_link_requests` テーブル追加（`nonce_hash` SHA-256保持、`target_user_id`, `previous_user_id`, `status`, `expires_at` 10分期限, `completed_at`） (`scripts/migrations/20260723_line_account_link_requests.sql` / `scripts/migrate-line-account-link-requests.mjs`)。
+  - **ドメイン処理 (`src/lib/lineAccountLink.ts`)**: linkToken発行、nonce生成＆ハッシュ化、PostgreSQLアドバイザリロック（`pg_advisory_xact_lock`）による同一LINE ID並行処理の直列化、安全なアカウント付け替え（移管）、10分期限切れ＆二重更新防止処理。
+  - **公開確認ページ (`GET /line/link`)**: `Referrer-Policy: no-referrer` 設定。未ログイン時の説明＆Clerkログイン復帰（`linkToken`保存なし）、ログイン済みのアカウント確認・食事記録保持の注意事項表示、LINE公式URLへの誘導。
+  - **API Route**:
+    - `POST /api/line/account-link/start`: 認証チェック、linkToken長検証、nonce生成＆account-linking URL返却。
+    - `DELETE /api/line/account-link`: 認証中ユーザー自身の `line_user_id` 解除（行ロック適用）。他ユーザー不可。
+  - **LINE Webhook (`src/app/api/webhooks/line/route.ts`)**:
+    - `accountLink` イベント処理追加（トランザクション内処理、Reply APIでの完了/移管メッセージ返信）。
+    - 未連携ユーザーの画像投稿時、同一 Reply API リクエストでの「受付」＋「LINE連携ボタン」送信（Push API非使用、コスト増加ゼロ）。
+    - 「連携」テキスト受信用応答（未連携時: ボタン付き案内返信、連携済み時: 設定画面案内）。
+  - **構造化ログ (`src/lib/lineAccountLinkLogger.ts`)**: LINE user ID, raw nonce, nonce_hash, linkToken, email, 氏名を一切含めない安全な構造化ログ出力。
+  - **テスト**: 8項目の通常クリーン統合テスト (`scripts/test-line-account-link.ts`)、および実PostgreSQLでの制約・並行処理・移管・競合テストモジュール (`scripts/test-line-account-link-isolated-db.ts`)。
+  - **隔離DBテスト検証成功**: ローカルDocker環境 (`logeats-test-pg`) 上の独立DB (`logeats_test_line_link_verify`) に対し、`ALLOW_ISOLATED_DB_TESTS=1` `REQUIRE_ISOLATED_DB_TESTS=1` で隔離DBテストを実行。Exit code 0 および全制約・並行タスク直列化テストの完全通過を確認完了。
+  - **基底スキーマ補正 (`scripts/migrations/20260723_core_schema.sql`)**: 隔離DB初期化時に参照される基底テーブルに `users.line_user_id` および `meal_logs` テーブル定義を追加。
+
+
+### 変更 (Changed)
+- **Clerk Webhook整理 (`src/app/api/webhooks/clerk/route.ts`)**
+  - `user.created` / `user.updated` から `line_user_id` の自動設定・削除処理を完全に除去。Clerk外部アカウント競合からLINE Bot連携を切り離し。
+- **設定画面改修 (`LineConnectionSettings.tsx` / `settings/page.tsx`)**
+  - DB `users.line_user_id` を連携状態の正とする方式に変更。Clerk `createExternalAccount` 削除。未設定時の無効化、トーク画面誘導、解除確認ダイアログの導入。
+- **「LINEで始める」導線の更新 (`LineConnectModalButton.tsx`)**
+  - `oauth_line` 経由のログイン導線を撤去し、「LINEから食事を記録する」ボタンへ更新。トーク画面での「連携」送信を促す UI に置換。
+- **middleware更新 (`src/middleware.ts`)**
+  - `/line/link(.*)` を公開ルートに追加。
+- **理由 (Why)**: ClerkのLINE OAuth競合によりLINE Bot機能が正常に紐付かない課題を解決し、ユーザー自身で安全にLINE連携を付け替え（移管）できるようにするため。食事記録データを損なわず、新しい送信課金を発生させないLINE Messaging API公式アカウント連携の実装を追加。
+### 追加 (Added)
 - **Phase 1.1 アフィリエイト収益計測基盤・Discord朝報拡張 (AFF-010)**
   - **DBマイグレーション**: `affiliate_banners` テーブルに `affiliate_network`, `campaign_id`, `creative_id`, `target_domain`, `metadata` カラムおよびインデックスを追加 (`scripts/migrations/20260723_affiliate_banners_phase1_1.sql` / `scripts/migrate-affiliate-banners.mjs`)。
   - **広告取得API拡張**: `/api/affiliates/random` で広告の各種識別ID・属性情報をクライアントへ安全に返却するように変更。

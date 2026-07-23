@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
     '/api/track',              // 匿名ユーザーを含む行動計測
     '/api/cron/daily-report',  // Vercel Cron。Route側のCRON_SECRETで認証
     '/api/webhooks/(.*)',      // ClerkやLINEのWebhook用ルート
+    '/line/link(.*)',           // LINEアカウント連携確認ページ（公開）
     '/terms',
     '/privacy',
     '/news(.*)',               // お知らせ・記事ページ（AdSense用）
