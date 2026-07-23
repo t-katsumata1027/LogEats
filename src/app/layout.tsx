@@ -71,6 +71,9 @@ export const metadata: Metadata = {
     description: "面倒な食事管理を、もっとラクに、楽しく。食事の写真をアップロードするかテキストを入力するだけで、AIが瞬時に概算のカロリーとPFCを自動計算・記録するAI食事管理アプリです。",
     images: ["/og-image.png"],
   },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "sQIryQWe8QfEbcpy5MRWQJfk603ogxuaEe3d0PF2Yfk",
+  },
 };
 
 const customLocalization = {
