@@ -161,7 +161,7 @@ export function AffiliateBanner({ variant = 'card', className = '' }: AffiliateB
                 elementArea > 0 &&
                 (visibleWidth * visibleHeight) / elementArea >= 0.5;
 
-            if (isIntersectingRef.current || isVisibleNow) {
+            if (isVisibleNow) {
                 timerRef.current = setTimeout(() => {
                     if (!hasTrackedImpressionRef.current && document.visibilityState === 'visible') {
                         hasTrackedImpressionRef.current = true;
